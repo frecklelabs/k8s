@@ -49,9 +49,9 @@ const run = spawnSync('renovate', [], {
   env: {
     ...env,
     RENOVATE_TOKEN: token,
-    // postUpgradeTasks only see env Renovate is told to pass on; the
-    // gateway-api vendor script calls `gh api` with GH_TOKEN.
-    RENOVATE_CUSTOM_ENV_VARIABLES: JSON.stringify({ ...proxyEnv, GH_TOKEN: token }),
+    // Never put the token in here: Renovate logs customEnvVariables
+    // unmasked at debug level (C-9 dry run, 2026-11-07).
+    RENOVATE_CUSTOM_ENV_VARIABLES: JSON.stringify(proxyEnv),
   },
 });
 process.exit(run.status ?? 1);

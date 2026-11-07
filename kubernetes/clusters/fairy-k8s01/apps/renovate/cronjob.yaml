@@ -3,7 +3,7 @@
 # for every frecklelabs repo. run.mjs mints the installation token and runs
 # Renovate. Global config is in ./config.
 #
-# Every 30 minutes over every repo the App is installed on. Forbid keeps a
+# Every 30 minutes over the repos in RENOVATE_AUTODISCOVER_FILTER. Forbid keeps a
 # slow sweep from overlapping the next. Event-driven one-repo runs (cockpit
 # C-1344) are planned to clone this jobTemplate, overriding only
 # RENOVATE_AUTODISCOVER_FILTER, so keep the whole definition of a run here.
@@ -15,6 +15,8 @@ metadata:
   name: renovate
   namespace: renovate
 spec:
+  # Explicit, so merging this undoes any hand-applied suspend.
+  suspend: false
   schedule: "7,37 * * * *"
   timeZone: America/Chicago
   concurrencyPolicy: Forbid
@@ -50,13 +52,10 @@ spec:
               env:
                 - name: RENOVATE_CONFIG_FILE
                   value: /config/config.json5
-                # Every repo the App is installed on.
+                # Live on these two first (C-9 cutover); the repos with a
+                # config of their own follow, then onboarding for the rest.
                 - name: RENOVATE_AUTODISCOVER_FILTER
-                  value: frecklelabs/*
-                # Dry run until the cutover review (C-9): "full" does the
-                # lookups and logs what it would do, without writing.
-                - name: RENOVATE_DRY_RUN
-                  value: full
+                  value: frecklelabs/k8s,frecklelabs/k8s-private
                 # Go, npm and PyPI go through the cluster's package proxy,
                 # for lookups and lockfile updates alike, as agent runs do.
                 # run.mjs passes these on to Renovate's child processes; npm
@@ -74,8 +73,11 @@ spec:
                   value: http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/
                 - name: UV_INDEX_URL
                   value: http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/
+                # Not debug: the debug-level "Env config" and "Combined config"
+                # dumps print customEnvVariables unmasked, so keep secrets
+                # out of those and the dumps out of the logs.
                 - name: LOG_LEVEL
-                  value: debug
+                  value: info
                 - name: LOG_FORMAT
                   value: json
               envFrom:
