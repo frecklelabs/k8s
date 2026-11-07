@@ -9,12 +9,13 @@
 # To re-vendor manually:   ./scripts/vendor-gateway-api-crds.sh
 # To check without writing: ./scripts/vendor-gateway-api-crds.sh --check
 #
-# Requires the `gh` CLI (auth via GH_TOKEN env or `gh auth login`).
+# Requires only git: upstream is public, so no token and no gh (the
+# self-hosted Renovate image ships git but not gh).
 
 set -euo pipefail
 
 # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
-TAG=v1.7.0
+TAG=v1.6.3
 
 REPO=kubernetes-sigs/gateway-api
 UPSTREAM_PATH=config/crd/standard
@@ -26,7 +27,7 @@ MODE=${1:-vendor}
 case "${MODE}" in
   vendor|--check) ;;
   --help|-h)
-    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)
@@ -35,16 +36,28 @@ case "${MODE}" in
     ;;
 esac
 
-command -v gh >/dev/null || { echo "ERROR: gh CLI required" >&2; exit 2; }
+command -v git >/dev/null || { echo "ERROR: git required" >&2; exit 2; }
 
 WORK=$(mktemp -d)
 trap 'rm -rf "${WORK}"' EXIT
 
-# Fetch upstream file list, then download each with a provenance header
-# into the temp dir.
-mapfile -t UPSTREAM_FILES < <(gh api "repos/${REPO}/contents/${UPSTREAM_PATH}?ref=${TAG}" --jq '.[].name')
+# Shallow, blobless, sparse clone: only the tag's CRD directory is fetched.
+SRC="${WORK}/src"
+GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone --quiet \
+  --depth 1 --branch "${TAG}" --filter=blob:none --sparse \
+  "https://github.com/${REPO}.git" "${SRC}"
+git -C "${SRC}" sparse-checkout set "${UPSTREAM_PATH}"
+
+# Files (not subdirectories) directly in the CRD directory, in byte order so
+# the kustomization.yaml order never depends on the locale.
+mapfile -t UPSTREAM_FILES < <(
+  git -C "${SRC}" ls-tree --full-tree HEAD "${UPSTREAM_PATH}/" \
+    | awk -F '\t' '$1 ~ / blob / { n = $2; sub(/.*\//, "", n); print n }' \
+    | LC_ALL=C sort
+)
 [[ ${#UPSTREAM_FILES[@]} -gt 0 ]] || { echo "ERROR: no files at ${REPO}/${UPSTREAM_PATH}@${TAG}" >&2; exit 1; }
 
+# Copy each into the temp dir with a provenance header.
 for f in "${UPSTREAM_FILES[@]}"; do
   {
     cat <<EOF
@@ -52,7 +65,7 @@ for f in "${UPSTREAM_FILES[@]}"; do
 # Source: https://github.com/${REPO}/blob/${TAG}/${UPSTREAM_PATH}/${f}
 # To bump: bump TAG in scripts/vendor-gateway-api-crds.sh and re-run.
 EOF
-    gh api "repos/${REPO}/contents/${UPSTREAM_PATH}/${f}?ref=${TAG}" --jq '.content' | base64 -d
+    cat "${SRC}/${UPSTREAM_PATH}/${f}"
   } > "${WORK}/${f}"
 done
 

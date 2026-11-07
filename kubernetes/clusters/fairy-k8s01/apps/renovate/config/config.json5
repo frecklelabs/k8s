@@ -55,6 +55,17 @@
   // follow GOPROXY from cronjob.yaml). The npmrc also drives npm lockfile
   // updates; a repo's own .npmrc is ignored while this is set.
   npmrc: 'registry=http://package-proxy.dev-platform.svc.cluster.local:8080/npm/',
+  // The package proxy is an internal host. Renovate warns on requests to
+  // internal hosts today and will refuse them once internalHostAccess
+  // defaults to block, unless an admin hostRule allows it. hostRules is a
+  // mergeable option, so these are concatenated with the env ones
+  // (RENOVATE_HOST_RULES, the ghcr.io credential), not replaced by them.
+  hostRules: [
+    {
+      matchHost: 'package-proxy.dev-platform.svc.cluster.local',
+      allowInternal: true,
+    },
+  ],
   packageRules: [
     {
       matchDatasources: ['pypi'],
