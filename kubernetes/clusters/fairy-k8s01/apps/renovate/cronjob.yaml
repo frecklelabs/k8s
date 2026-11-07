@@ -46,7 +46,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: renovate
-              image: ghcr.io/renovatebot/renovate:44.205.1@sha256:5a192fb2e0e9601aa8fc953d33101a7157954c9dfbd4483d8885de671897eaad
+              image: ghcr.io/renovatebot/renovate:44.222.2@sha256:227e723ed8c57f1b8b629066c7e0ad8d8f933d905f4a2f6fb4d597a74118637c
               command: ["/usr/local/sbin/renovate-entrypoint.sh"]
               args: ["node", "/config/run.mjs"]
               env:
