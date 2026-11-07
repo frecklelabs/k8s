@@ -1,0 +1,13 @@
+---
+# C-396: dedicated fairy exit node with its own tag (auto-approved), split out
+# of btx1-subnet-rtr01 the way atlantis-exit01 is on atlantis.
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: btx1-exit01
+spec:
+  proxyClass: tailscale-tun
+  hostname: btx1-exit01
+  exitNode: true
+  tags:
+    - tag:fairy-k8s01-exit-node

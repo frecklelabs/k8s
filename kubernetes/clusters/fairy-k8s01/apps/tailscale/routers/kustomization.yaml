@@ -4,3 +4,20 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./router.yaml
+  - ./subnet-rtr02.yaml
+  - ./exit01.yaml
+  - ./subnet-router-addition.yaml
+# Inherit the existing router's whole route set to prevent prefix drift.
+replacements:
+  - source:
+      kind: Connector
+      name: btx1-subnet-rtr01
+      fieldPath: spec.subnetRouter
+    targets:
+      - select:
+          kind: Connector
+          name: btx1-subnet-rtr02
+        fieldPaths:
+          - spec.subnetRouter
+        options:
+          create: true

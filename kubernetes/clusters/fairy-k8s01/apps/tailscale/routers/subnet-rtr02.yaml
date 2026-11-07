@@ -1,0 +1,16 @@
+---
+# C-396: second fairy subnet router with its own tag, so its routes are
+# auto-approved (frecklelabs/network autoApprovers) instead of riding on the
+# operator default tag:fairy-k8s01. Connector tags can't change once the node
+# exists, so this replaces btx1-subnet-rtr01 rather than retagging it; rtr01
+# goes once this one is verified. Routes are copied from rtr01 by kustomize.
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: btx1-subnet-rtr02
+spec:
+  proxyClass: subnet-router-addition
+  hostname: btx1-subnet-rtr02
+  exitNode: false
+  tags:
+    - tag:fairy-k8s01-subnet-rtr
