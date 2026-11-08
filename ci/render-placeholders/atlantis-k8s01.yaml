@@ -1,0 +1,17 @@
+# Live-only inputs of atlantis-k8s01's public Flux Kustomizations, for the
+# offline render check (.github/workflows/render.yaml). Not applied to any
+# cluster: scripts/prepare-render-root.py copies this into the CI checkout.
+# Values only have to render.
+#
+# Add an entry when a Kustomization starts reading a ConfigMap/Secret or
+# depending on a Kustomization that only the private repo creates; the check
+# names it ("<ns>/<name> not found").
+---
+# Created by the private repo; read by homebox/homebox.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homebox-secret-source
+  namespace: homebox
+data:
+  HOMEBOX_APP_SECRET_ID: render-placeholder
