@@ -23,6 +23,17 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+    # Paid cloud models (OpenRouter, C-1170). Only routes that name this
+    # listener (sectionName: cloud) attach here, and the ai-gateway-ingress
+    # CiliumNetworkPolicy admits only the open-webui namespace to it, so
+    # cockpit runs and the MCP servers can never reach a pay-per-token model.
+    # Ports >= 1024 are not remapped by Envoy Gateway: container port 8080.
+    - name: cloud
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
 ---
 # Envoy Gateway defaults the client buffer limit to 32kiB, too small for
 # AI request/response bodies. Bump to 50MiB.
@@ -64,6 +75,12 @@ spec:
     - name: http
       port: 80
       targetPort: 10080
+      protocol: TCP
+    # The cloud listener (OpenRouter). open-webui only, enforced at the pod
+    # by the ai-gateway-ingress CiliumNetworkPolicy.
+    - name: cloud
+      port: 8080
+      targetPort: 8080
       protocol: TCP
 ---
 # Dedicated data plane for the AI gateway. Mirrors the class-level
