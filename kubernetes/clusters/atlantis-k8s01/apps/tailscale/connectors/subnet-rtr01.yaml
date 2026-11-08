@@ -4,7 +4,8 @@ metadata:
   name: atlantis-subnet-rtr01
   namespace: tailscale
 spec:
-  proxyClass: tailscale-tun
+  # Shares the routers' class so hostname anti-affinity holds both ways.
+  proxyClass: subnet-router-addition
   hostname: atlantis-subnet-rtr01
   tags:
     - tag:atlantis-k8s01-subnet-rtr
