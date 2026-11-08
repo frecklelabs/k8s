@@ -52,6 +52,13 @@
   },
   packageRules: [
     {
+      // CRD minor and major upgrades need a Cilium and Envoy Gateway
+      // compatibility review before merging.
+      matchDepNames: ['kubernetes-sigs/gateway-api'],
+      matchUpdateTypes: ['minor', 'major'],
+      automerge: false,
+    },
+    {
       // These fixed one-shot recovery Jobs preserve evidence from a specific run.
       // Image changes mutate immutable pod templates; recreating the Jobs could
       // rerun data-saving commands. Keep changes deliberate and manually reviewed.
