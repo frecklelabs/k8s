@@ -37,6 +37,12 @@ spec:
         - op: replace
           path: /spec/dataFrom/0/extract/key
           value: tailscale-operator
+        # C-66: keep operator-oauth when the path moves to wif-operator, until
+        # the operator is verified on WIF; it is removed by hand after that.
+        - op: add
+          path: /metadata/annotations
+          value:
+            kustomize.toolkit.fluxcd.io/prune: disabled
     - target:
         kind: HelmRelease
         name: tailscale-operator
