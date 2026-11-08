@@ -18,6 +18,7 @@ resources:
   - ./intel-gpu-exporter.yaml
   - ./intel-gpu-resource-driver.yaml
   - ./kubelet-csr-approver.yaml
+  - ./kubernetes-rbac.yaml
   - ./metrics-server.yaml
   - ./multus.yaml
   - ./node-feature-discovery.yaml
