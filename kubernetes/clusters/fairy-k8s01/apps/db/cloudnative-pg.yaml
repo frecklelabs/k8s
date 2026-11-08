@@ -25,8 +25,8 @@ spec:
   timeout: 5m
   prune: true
   wait: true
-  # C-72: fairy reads the CNPG substitution values from GSM. atlantis still
-  # reads the shared ExternalSecret's 1Password item until its own cutover.
+  # C-72: fairy reads the CNPG substitution values from GSM. atlantis has the
+  # same patch with its own namespace in the key.
   patches:
     - target:
         kind: ExternalSecret
