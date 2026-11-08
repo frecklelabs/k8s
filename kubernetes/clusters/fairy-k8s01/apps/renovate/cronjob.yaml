@@ -72,6 +72,10 @@ spec:
                   value: http://package-proxy.dev-platform.svc.cluster.local:8080/npm/
                 - name: PIP_INDEX_URL
                   value: http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/
+                # pip rejects the internal HTTP index during Python bootstrap
+                # unless this specific host is explicitly trusted.
+                - name: PIP_TRUSTED_HOST
+                  value: package-proxy.dev-platform.svc.cluster.local
                 - name: UV_INDEX_URL
                   value: http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/
                 # Not debug: the debug-level "Env config" and "Combined config"
