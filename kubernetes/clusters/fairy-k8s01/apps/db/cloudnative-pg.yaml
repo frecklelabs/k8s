@@ -25,6 +25,23 @@ spec:
   timeout: 5m
   prune: true
   wait: true
+  # C-72: fairy reads the CNPG substitution values from GSM. atlantis still
+  # reads the shared ExternalSecret's 1Password item until its own cutover.
+  patches:
+    - target:
+        kind: ExternalSecret
+        name: namespace-post-build-secrets
+      patch: |-
+        - op: replace
+          path: /spec/secretStoreRef
+          value:
+            kind: SecretStore
+            name: gcp-sm
+        - op: replace
+          path: /spec/dataFrom/0/extract
+          value:
+            key: ${CLUSTER_NAME}-db-namespace-post-build-secrets
+            version: "1"
 
 ---
 # yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
