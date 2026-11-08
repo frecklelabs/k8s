@@ -38,14 +38,27 @@ def main():
         if os.environ["GITHUB_REPOSITORY"] != REPO:
             raise ValueError()
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
-        number = event["number"]
-        if type(number) is not int or number <= 0:
+        kind = os.environ["GITHUB_EVENT_NAME"]
+        if kind == "pull_request_target":
+            number = event["number"]
+            if type(number) is not int or number <= 0:
+                raise ValueError()
+            pr = api("/pulls/" + str(number))
+            candidate, base, title, body = snapshot(pr)
+        elif kind == "merge_group":
+            # A group's commit combines every queued PR on top of main. Rescan
+            # all of its introduced commits and messages (the squash messages
+            # carry each PR's title and body); there is no mutable PR text.
+            group = event["merge_group"]
+            if group["base_ref"] != "refs/heads/main":
+                raise ValueError()
+            pr, candidate, base, title, body = None, group["head_sha"], group["base_sha"], "", ""
+        else:
             raise ValueError()
-        pr = api("/pulls/" + str(number))
-        head, base, title, body = snapshot(pr)
-        if not all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in (head, base)):
-            head = None
+        if not all(type(sha) is str and re.fullmatch(r"[0-9a-f]{40}", sha)
+                   for sha in (candidate, base)):
             raise ValueError()
+        head = candidate
         status("pending")
         subprocess.run(["go", "build", "-o", str(Path(os.environ["RUNNER_TEMP"]) / "leakcheck"),
                         ".github/leakcheck/main.go", ".github/leakcheck/matcher.go"],
@@ -74,7 +87,7 @@ def main():
             sys.stdout.buffer.write(result.stdout)
         if result.returncode != 0:
             raise ValueError()
-        if snapshot(api("/pulls/" + str(number))) != snapshot(pr):
+        if pr is not None and snapshot(api("/pulls/" + str(number))) != snapshot(pr):
             raise ValueError()
         status("success")
         return 0
