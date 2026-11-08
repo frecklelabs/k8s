@@ -103,7 +103,7 @@ spec:
         bypassrls: false
         passwordSecret:
           name: lore-db-role
-      # switchboard, the people's MCP hub (freckleapps/switchboard, C-357):
+      # switchboard, the people's MCP hub (frecklelabs/switchboard, C-357):
       # users, per-user backend enablement and the calls audit. The secret
       # and the Database CR are in the private repo (apps/db/switchboard).
       - name: switchboard
@@ -142,6 +142,44 @@ spec:
           - pg_read_all_data
         passwordSecret:
           name: bookorbit-read-db-role
+
+      - name: windmill_user
+        ensure: present
+        login: false
+        inherit: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: -1
+      - name: windmill_admin
+        ensure: present
+        login: false
+        inherit: true
+        superuser: false
+        bypassrls: true
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: -1
+        inRoles:
+        - windmill_user
+      - name: windmill
+        ensure: present
+        login: true
+        inherit: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: -1
+        inRoles:
+        - windmill_admin
+        - windmill_user
+        passwordSecret:
+          name: windmill-db-role
 
   plugins:
     - name: barman-cloud.cloudnative-pg.io

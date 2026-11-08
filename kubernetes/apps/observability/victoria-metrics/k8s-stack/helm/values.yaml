@@ -245,6 +245,17 @@ defaultRules:
             and on (namespace, statefulset, job, cluster)
               (kube_leaderworkerset_rollout_partition{job="kube-state-metrics"} > 0)
           )
+    # These targets scrape every 20s. A retired target can leave one up=0
+    # sample in instant-query lookback without a staleness marker. Require
+    # a sample younger than 60s so it clears before the unchanged 2m hold.
+    # Continuously scraped failures stay eligible; missing discovery targets
+    # remain covered separately by ScrapePoolHasNoTargets.
+    ServiceDown:
+      spec:
+        expr: |-
+          (up{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth).*"} == 0)
+          and
+          (time() - timestamp(up{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth).*"}) < 60)
     # vmagent logs one warning per failed scrape (lib/promscrape/scrapework.go).
     # A replaced pod's old IP fails one scrape before service discovery drops
     # it, so a few rollouts were enough to fire this with no real problem.
@@ -374,6 +385,31 @@ alertmanager:
     # `namespace="<config's namespace>"` into each merged route and nothing
     # outside that namespace ever matches.
     disableNamespaceMatcher: true
+    # Two peered replicas (C-380), so one pod restarting (a chart bump, a node
+    # drain) no longer takes Alertmanager down. With replicaCount > 1 the
+    # operator peers the pods (--cluster.peer, port 9094) and the chart lists
+    # every replica as a vmalert notifier; the peers gossip silences and the
+    # notification log, so each alert still reaches cockpit once, and a single
+    # pod restart no longer wipes silences (C-378). Data stays on emptyDir on
+    # purpose: no Ceph dependency for Alertmanager.
+    replicaCount: 2
+    # A rollout replaces each pod with a new gossip member; the survivor keeps
+    # the old one as a failed peer for --cluster.reconnect-timeout (6h by
+    # default), so AlertmanagerClusterFailedPeers fired for hours after every
+    # rollout (C-1291). The --cluster.peer DNS names are re-resolved on each
+    # refresh, so a peer that really comes back still rejoins after 5m.
+    extraArgs:
+      cluster.reconnect-timeout: 5m
+    podDisruptionBudget:
+      maxUnavailable: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: vmalertmanager
+            app.kubernetes.io/instance: vm
 
 kubeControllerManager:
   enabled: true
