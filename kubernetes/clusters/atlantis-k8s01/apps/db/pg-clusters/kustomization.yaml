@@ -7,3 +7,4 @@ resources:
   - ./objectstore.yaml
   - ./pg-17a-cluster.yaml
   - ./pg-17a-externalsecret.yaml
+  - ./package-proxy-db.yaml
