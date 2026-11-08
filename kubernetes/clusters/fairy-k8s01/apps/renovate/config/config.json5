@@ -7,9 +7,43 @@
 {
   platform: 'github',
   autodiscover: true,
-  // Only repos that carry a Renovate config of their own; no onboarding PRs.
-  onboarding: false,
+  // A repo without a Renovate config of its own gets one "Configure
+  // Renovate" PR adding onboardingConfig as .renovaterc.json5, and nothing
+  // else until that PR merges (C-9). The shape matches the configs in ops,
+  // network and tofu; a repo can tailor its file in the onboarding PR.
+  onboarding: true,
   requireConfig: 'required',
+  onboardingConfigFileName: '.renovaterc.json5',
+  onboardingConfig: {
+    $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+    extends: [
+      'config:recommended',
+      'helpers:pinGitHubActionDigests',
+      'github>frecklelabs/k8s//.renovate/labels.json5',
+      'github>frecklelabs/k8s//.renovate/semanticCommits.json5',
+      ':dependencyDashboard',
+      ':semanticCommits',
+      ':timezone(America/Chicago)',
+    ],
+    rebaseWhen: 'behind-base-branch',
+    dependencyDashboardTitle: 'Renovate Dashboard 🤖',
+    mise: {
+      enabled: true,
+    },
+    packageRules: [
+      {
+        // Renovate PRs are the infra agent's to handle (cockpit C-194);
+        // only GitHub Actions updates under .github/ ask for Nicole.
+        matchFileNames: ['.github/**'],
+        reviewers: ['nicolerenee'],
+      },
+      {
+        matchManagers: ['mise'],
+        semanticCommitScope: 'toolchain',
+        commitMessageTopic: '{{depName}}',
+      },
+    ],
+  },
   // Commit through the GitHub API, so commits are signed as the App.
   platformCommit: 'enabled',
   // Commands repos may run as postUpgradeTasks (anchored regexes).
