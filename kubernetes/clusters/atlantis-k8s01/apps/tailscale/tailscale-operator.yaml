@@ -12,8 +12,6 @@ spec:
   dependsOn:
     - name: generic-device-plugin
       namespace: kube-system
-    - name: onepassword-stores
-      namespace: external-secrets
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -21,7 +19,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./kubernetes/apps/networking/tailscale-operator/operator
+  path: ./kubernetes/apps/networking/tailscale-operator/wif-operator
   interval: 30s
   retryInterval: 1m
   timeout: 5m
@@ -29,24 +27,15 @@ spec:
   wait: true
   patches:
     - target:
-        kind: ExternalSecret
-      patch: |-
-        - op: replace
-          path: /spec/secretStoreRef/name
-          value: op-cluster-vault
-        - op: replace
-          path: /spec/dataFrom/0/extract/key
-          value: tailscale-operator
-        # C-66: keep operator-oauth when the path moves to wif-operator, until
-        # the operator is verified on WIF; it is removed by hand after that.
-        - op: add
-          path: /metadata/annotations
-          value:
-            kustomize.toolkit.fluxcd.io/prune: disabled
-    - target:
         kind: HelmRelease
         name: tailscale-operator
       patch: |-
+        - op: replace
+          path: /spec/values/oauth/clientId
+          value: TrLVHSb5X621CNTRL-ks4nHGiXi421CNTRL
+        - op: replace
+          path: /spec/values/oauth/audience
+          value: api.tailscale.com/TrLVHSb5X621CNTRL-ks4nHGiXi421CNTRL
         - op: replace
           path: /spec/values/apiServerProxyConfig
           value:
