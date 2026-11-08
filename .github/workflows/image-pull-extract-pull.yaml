@@ -61,7 +61,7 @@ jobs:
         uses: home-operations/flate/action@2e5aa3f729477baa631486ce9b92a5df197286c2 # main
         with:
           base: ""
-          version: "0.4.12"
+          version: "0.6.5"
 
       # --allow-missing-secrets: the janet/hedgehog OCIRepositories authenticate
       # with the `ghcr-pull` dockerconfigjson, materialized by a
@@ -73,6 +73,14 @@ jobs:
       # than caught here; cert and proxy secretRefs still fail loud. Images
       # inside those private bundles are consequently not pre-pulled — they are
       # owned by the app repos, not this one.
+      #
+      # --force-generic-provider: the infra-private GitRepository authenticates
+      # with `provider: github` (the freckle-flux App, Secret `github-app`),
+      # which flate otherwise rejects outright as "not implemented", failing
+      # the whole render. With this flag it takes the generic SecretRef path;
+      # `github-app` comes from an ExternalSecret that isn't materialized
+      # offline, so --allow-missing-secrets soft-skips the private source,
+      # exactly as it did for the old SSH deploy key. Needs flate >= 0.6.3.
       #
       # The exit-code handling below is deliberate. flate exits non-zero both
       # for genuine render failures AND when Kustomizations are merely "blocked
@@ -115,6 +123,7 @@ jobs:
             flate get images \
               --path kubernetes/clusters/${{ inputs.cluster }}/flux \
               --allow-missing-secrets \
+              --force-generic-provider \
               --api-versions resource.k8s.io/v1/DeviceClass \
               --output json \
               --no-progress > images.json 2> flate.err || rc=$?

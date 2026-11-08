@@ -55,13 +55,39 @@ class ScopeTests(unittest.TestCase):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(doc))
 
-    def images(self):
-        result = subprocess.run([
+    def render(self, *extra):
+        return subprocess.run([
             os.environ.get('FLATE', 'flate'), 'get', 'images', '--path',
-            'kubernetes/clusters/one/flux', '--allow-missing-secrets', '--output', 'json', '--no-progress',
+            'kubernetes/clusters/one/flux', '--allow-missing-secrets', *extra, '--output', 'json', '--no-progress',
         ], cwd=self.root, capture_output=True, text=True, timeout=60)
+
+    def images(self, *extra):
+        result = self.render(*extra)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
+
+    def test_github_app_source_skips_like_a_missing_secret(self):
+        # infra-private authenticates with provider: github (the Flux GitHub
+        # App). flate rejects that provider outright unless told to take the
+        # generic SecretRef path, where the offline-missing Secret soft-skips.
+        self.write('kubernetes/clusters/one/flux/private.yaml', {
+            'apiVersion': 'source.toolkit.fluxcd.io/v1', 'kind': 'GitRepository',
+            'metadata': {'name': 'private', 'namespace': 'flux-system'},
+            'spec': {'url': 'https://github.invalid/example/private.git', 'interval': '1h',
+                     'provider': 'github', 'ref': {'branch': 'main'}, 'secretRef': {'name': 'github-app'}},
+        })
+        self.write('kubernetes/clusters/one/flux/private-ks.yaml', {
+            'apiVersion': 'kustomize.toolkit.fluxcd.io/v1', 'kind': 'Kustomization',
+            'metadata': {'name': 'private', 'namespace': 'flux-system'},
+            'spec': {'path': './kubernetes/clusters/one/private', 'interval': '1h',
+                     'sourceRef': {'kind': 'GitRepository', 'name': 'private'}},
+        })
+        scope.prepare(self.root, 'one')
+        rejected = self.render()
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('not implemented', rejected.stderr)
+        self.assertEqual(self.images('--force-generic-provider'),
+                         ['registry.example/one-init:1', 'registry.example/one:1'])
 
     def test_foreign_root_reproduces_then_stays_in_cluster(self):
         self.assertIn('registry.example/two:1', self.images())

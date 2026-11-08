@@ -68,7 +68,7 @@ jobs:
       - uses: home-operations/flate/action@2e5aa3f729477baa631486ce9b92a5df197286c2 # main
         with:
           base: ""
-          version: "0.4.12"
+          version: "0.6.5"
       - run: python3 scripts/test-image-pull-scope.py
 
   clusters:
