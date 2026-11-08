@@ -80,9 +80,13 @@ metadata:
   name: local-models
 spec:
   parentRefs:
+    # Name the listener: a parentRef without sectionName attaches to every
+    # listener on the Gateway, which would also put the local models on the
+    # open-webui-only `cloud` listener (port 8080).
     - name: ai
       kind: Gateway
       group: gateway.networking.k8s.io
+      sectionName: http
   # One rule per served model: clients send the canonical served name (also what
   # surfaces in the gateway's GET /v1/models) and the override rewrites it to the
   # short id each deploy passes as --served-model-name.
