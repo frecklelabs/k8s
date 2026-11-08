@@ -52,10 +52,10 @@ spec:
               env:
                 - name: RENOVATE_CONFIG_FILE
                   value: /config/config.json5
-                # Live on these two first (C-9 cutover); the repos with a
-                # config of their own follow, then onboarding for the rest.
+                # The repos with a Renovate config of their own (C-9);
+                # onboarding for the rest follows.
                 - name: RENOVATE_AUTODISCOVER_FILTER
-                  value: frecklelabs/k8s,frecklelabs/k8s-private
+                  value: frecklelabs/k8s,frecklelabs/k8s-private,frecklelabs/agent-platform,frecklelabs/containers,frecklelabs/janet,frecklelabs/network,frecklelabs/ops,frecklelabs/tofu
                 # Go, npm and PyPI go through the cluster's package proxy,
                 # for lookups and lockfile updates alike, as agent runs do.
                 # run.mjs passes these on to Renovate's child processes; npm
