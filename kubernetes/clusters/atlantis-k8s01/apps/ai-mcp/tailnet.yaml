@@ -1,0 +1,48 @@
+# Tailnet endpoint for the Atlantis ops-mcp, added next to the Cluster Mesh
+# export so the cross-site path can move off the mesh. It shares the one
+# Atlantis MCP tag (see flux-system/mcp-tailnet). ops-mcp keeps its own token
+# audience and RBAC; the cockpit gate and agentgateway decide each call.
+# Nothing uses this name yet.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ops-mcp-tailnet
+  annotations:
+    tailscale.com/hostname: atlantis-ops-mcp
+    tailscale.com/proxy-group: ingress-proxy
+    tailscale.com/tags: tag:atlantis-k8s01-mcp
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app: ops-mcp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+# Lets the local Tailscale ingress proxies (and nothing else new) reach the
+# MCP port, so the tailnet Service next to this file works. It adds to the
+# existing allow-list policy for these pods; the tailnet policy decides who
+# may reach the proxies, and only fairy's egress proxies and admins may.
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ops-mcp-tailnet
+spec:
+  endpointSelector:
+    matchLabels:
+      app: ops-mcp
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource-type: proxygroup
+            tailscale.com/parent-resource: ingress-proxy
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

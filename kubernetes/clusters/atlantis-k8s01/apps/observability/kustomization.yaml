@@ -8,6 +8,7 @@ components:
   - ../../../../components/flux-post-build-variables
 resources:
   - ./mcp-mesh-export.yaml
+  - ./mcp-tailnet.yaml
   - ./external-secrets.yaml
   - ./gatus.yaml
   - ./grafana-dashboards.yaml
