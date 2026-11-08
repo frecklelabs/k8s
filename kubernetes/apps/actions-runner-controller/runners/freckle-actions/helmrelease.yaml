@@ -33,7 +33,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/frecklelabs
     githubConfigSecret: freckle-actions-runner-github-creds
-    minRunners: 0
+    minRunners: 2
     maxRunners: 10
     runnerScaleSetName: ${CLUSTER_NAME}-freckle-actions
     # Docker services and builds share a job-local daemon and emptyDir work volume.
