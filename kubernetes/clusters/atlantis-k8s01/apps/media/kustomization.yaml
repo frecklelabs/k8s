@@ -19,6 +19,7 @@ resources:
   - ./media-mesh-export.yaml
   - ./media-mesh-import.yaml
   - ./promptbook.yaml
+  - ./promptbook-restore-check.yaml
   - ./prowlarr.yaml
   - ./qbt-reel.yaml
   - ./qui.yaml

@@ -1,0 +1,127 @@
+---
+# Temporary restore target for C-38's Promptbook rsync-tls recovery check.
+# Retained until Nicole approves its deletion; never mount the live app PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: promptbook-restore-check-c38
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ceph-block
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: promptbook-restore-check-c38
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      # Promptbook runs as root, so a real restore writes root-owned files.
+      # The non-root receiver owns the backup copies (UID 1000), so root needs
+      # DAC_OVERRIDE to read files and directories with owner-only modes.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: restore-check
+          image: mirror.gcr.io/python:3.15.2-slim
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+              add: [DAC_OVERRIDE]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          command: [python3, -B, -c]
+          args:
+            - |
+              import collections
+              import hashlib
+              import os
+              import shutil
+              import stat
+              from pathlib import Path
+
+              source = Path('/backup')
+              # A fresh owned child directory, so copytree never touches the mount root.
+              target = Path('/restore/recovery')
+              assert not target.exists(), 'Recovery directory already exists; use a new Job and directory'
+
+              def inventory(root):
+                  result = {}
+                  owners = collections.Counter()
+                  def fail(error):
+                      raise RuntimeError('Cannot enumerate recovery files') from error
+                  for directory, dirs, files in os.walk(root, onerror=fail):
+                      dirs[:] = sorted(d for d in dirs if d not in ('.zfs', 'lost+found'))
+                      for name in sorted(dirs + files):
+                          path = Path(directory) / name
+                          info = path.lstat()
+                          relative = str(path.relative_to(root))
+                          owners[(info.st_uid, info.st_gid)] += 1
+                          if stat.S_ISLNK(info.st_mode):
+                              result[relative] = ('link', os.readlink(path))
+                          elif stat.S_ISDIR(info.st_mode):
+                              result[relative] = ('directory', oct(stat.S_IMODE(info.st_mode)))
+                          elif stat.S_ISREG(info.st_mode):
+                              with path.open('rb') as stream:
+                                  digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+                              result[relative] = ('file', info.st_size, oct(stat.S_IMODE(info.st_mode)), digest)
+                          else:
+                              raise RuntimeError('Unexpected special file in recovery tree')
+                  return result, owners
+
+              def summary(entries):
+                  files = [entry for entry in entries.values() if entry[0] == 'file']
+                  dirs = sum(entry[0] == 'directory' for entry in entries.values())
+                  links = [entry for entry in entries.values() if entry[0] == 'link']
+                  return len(files), sum(entry[1] for entry in files), dirs, len(links), sum(len(entry[1]) for entry in links)
+
+              before, backup_owners = inventory(source)
+              files, size, dirs, links, link_bytes = summary(before)
+              assert files, 'Backup contains no regular files'
+              print(f'Backup inventoried: {files} regular files, {size} bytes, {dirs} directories, {links} links ({link_bytes} link bytes)', flush=True)
+              print(f'Backup ownership (uid, gid): {dict(sorted(backup_owners.items()))}', flush=True)
+              # Keep links as links and copy modes; never read outside the backup tree.
+              shutil.copytree(source, target, symlinks=True,
+                              ignore=shutil.ignore_patterns('.zfs', 'lost+found'))
+              restored, restored_owners = inventory(target)
+              after, _ = inventory(source)
+              assert before == after, 'Backup changed during recovery check; rerun between hourly syncs'
+              assert before == restored, 'Recovery tree, sizes, modes, hashes or links differ'
+              print(f'Restored {files} files, {size} bytes; every SHA256 hash, size and mode matches', flush=True)
+              print(f'Directory inventory and modes match: {dirs} directories; {links} links match', flush=True)
+              print(f'Restored ownership (uid, gid): {dict(sorted(restored_owners.items()))}', flush=True)
+              assert set(restored_owners) == {(0, 0)}, 'Restored tree is not wholly root-owned'
+              print('RESTORE CHECK PASSED', flush=True)
+          volumeMounts:
+            - name: backup
+              mountPath: /backup
+              readOnly: true
+            - name: restore
+              mountPath: /restore
+      volumes:
+        - name: backup
+          persistentVolumeClaim:
+            claimName: promptbook-backup
+            readOnly: true
+        - name: restore
+          persistentVolumeClaim:
+            claimName: promptbook-restore-check-c38
