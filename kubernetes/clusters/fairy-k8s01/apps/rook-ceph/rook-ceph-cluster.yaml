@@ -24,3 +24,23 @@ spec:
   timeout: 30m
   prune: false
   wait: true
+  patches:
+    # Encrypt new OSDs at rest (C-1419). Rook reads this only when it creates an
+    # OSD, so existing OSDs stay as they are; the cn04+ rebuild retires them.
+    # Host-based OSDs keep their LUKS keys in the mon config-key store
+    # (dm-crypt/osd/<fsid>/luks); the off-cluster copy goes to GSM
+    # fairy-k8s01-rook-ceph-osd-dmcrypt-keys after each OSD-creation wave.
+    - target:
+        kind: HelmRelease
+        name: rook-ceph-cluster
+      patch: |-
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: rook-ceph-cluster
+        spec:
+          values:
+            cephClusterSpec:
+              storage:
+                config:
+                  encryptedDevice: "true"
