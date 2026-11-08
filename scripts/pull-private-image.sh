@@ -5,7 +5,7 @@
 # Usage: pull-private-image.sh <image> <node-internal-ip>
 #
 # Talos's image pull API authenticates only through machine-config registry
-# auth, so it fetches private freckleapps packages anonymously and GHCR
+# auth, so it fetches private frecklelabs packages anonymously and GHCR
 # answers 401. kubelet pulls them with a Pod's imagePullSecrets, the same path
 # the workloads use. The Pod mounts the image as an image volume beside a
 # pause container, so the image is pulled into the node's containerd store
@@ -27,7 +27,7 @@ API="${KUBE_API:-https://kubernetes.default.svc}"
 
 # The ref is interpolated into a JSON body: accept only the characters an
 # image reference can contain, and only the private org this path is for.
-ref_re='^ghcr\.io/freckleapps/[a-z0-9]+([._/-][a-z0-9]+)*(:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?(@sha256:[0-9a-f]{64})?$'
+ref_re='^ghcr\.io/frecklelabs/[a-z0-9]+([._/-][a-z0-9]+)*(:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?(@sha256:[0-9a-f]{64})?$'
 if [[ ! "${IMAGE}" =~ ${ref_re} ]]; then
   echo "::error::refusing unexpected private image reference: ${IMAGE}"
   exit 1
