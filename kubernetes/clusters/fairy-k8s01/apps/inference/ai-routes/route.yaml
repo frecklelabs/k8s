@@ -96,7 +96,8 @@ spec:
     # hanging on a backend with no pods. To revive, add back a rule matching
     # x-ai-eg-model nvidia/MiniMax-M2.7-NVFP4 -> backendRef
     # local-minimax-m27-nvfp4, modelNameOverride minimax-m2.7, request 1800s.
-    - matches:
+    - name: flash-next
+      matches:
         - headers:
             - type: Exact
               name: x-ai-eg-model
