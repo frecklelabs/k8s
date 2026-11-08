@@ -51,12 +51,6 @@ metadata:
   name: qwen38-flash-next
 spec:
   replicas: 2
-  # Canary: only group 1 picks up the new template; group 0 keeps serving
-  # until group 1 is verified, then the partition is removed.
-  rolloutStrategy:
-    type: RollingUpdate
-    rollingUpdateConfiguration:
-      partition: 1
   leaderWorkerTemplate:
     size: 2
     restartPolicy: RecreateGroupOnPodRestart
