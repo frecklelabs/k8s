@@ -7,9 +7,12 @@
 #   - zdr:      the workspace guardrail enforces zero data retention for every
 #               provider group, Safety Retention endpoints excluded. A model
 #               with no ZDR endpoint is refused by OpenRouter, not rerouted.
-#   - standard: no ZDR. Wired up below but has NO route yet, so nothing can
-#               call it. When a non-ZDR model is wanted, add an AIGatewayRoute
-#               rule named no-zdr/<upstream-id> on the cloud listener, and
+#   - standard: no ZDR. Not wired up here yet: its key exists in GSM
+#               (fairy-k8s01-inference-openrouter-standard-api-key) but
+#               nothing in the cluster reads it. When a non-ZDR model is
+#               wanted, add an ExternalSecret, an AIServiceBackend and its
+#               BackendSecurityPolicy for that key, plus an AIGatewayRoute
+#               rule matching no-zdr/<upstream-id> on the cloud listener, and
 #               label the model "(no ZDR)" in every client.
 #
 # Every route here attaches only to the Gateway's `cloud` listener (port
@@ -35,22 +38,6 @@ spec:
       remoteRef:
         key: fairy-k8s01-inference-openrouter-zdr-api-key
 ---
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: openrouter-standard-api-key
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    kind: SecretStore
-    name: gcp-sm
-  target:
-    name: openrouter-standard-api-key
-  data:
-    - secretKey: apiKey
-      remoteRef:
-        key: fairy-k8s01-inference-openrouter-standard-api-key
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
@@ -74,8 +61,8 @@ spec:
     wellKnownCACertificates: System
     hostname: openrouter.ai
 ---
-# Both AIServiceBackends share the one Backend; the key (and so the workspace
-# and its ZDR guardrail) is what tells them apart.
+# The key (and so the workspace and its ZDR guardrail) is what makes this
+# backend ZDR; a future standard backend would share the same Backend.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIServiceBackend
 metadata:
@@ -102,34 +89,6 @@ spec:
   apiKey:
     secretRef:
       name: openrouter-zdr-api-key
----
-# Standard (no ZDR). No route references this backend yet; see the header.
-apiVersion: aigateway.envoyproxy.io/v1beta1
-kind: AIServiceBackend
-metadata:
-  name: openrouter-standard-no-zdr
-spec:
-  schema:
-    name: OpenAI
-    prefix: /api/v1
-  backendRef:
-    group: gateway.envoyproxy.io
-    kind: Backend
-    name: openrouter
----
-apiVersion: aigateway.envoyproxy.io/v1beta1
-kind: BackendSecurityPolicy
-metadata:
-  name: openrouter-standard-no-zdr
-spec:
-  targetRefs:
-    - group: aigateway.envoyproxy.io
-      kind: AIServiceBackend
-      name: openrouter-standard-no-zdr
-  type: APIKey
-  apiKey:
-    secretRef:
-      name: openrouter-standard-api-key
 ---
 # ZDR models. Clients send zdr/<OpenRouter model id>; the override rewrites it
 # to the upstream id. IDs checked against OpenRouter's public model endpoints

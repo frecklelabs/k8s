@@ -23,8 +23,9 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
-    # Paid cloud models (OpenRouter, C-1170). Only routes that name this
-    # listener (sectionName: cloud) attach here, and the ai-gateway-ingress
+    # Paid cloud models (OpenRouter, C-1170). Every route on this Gateway must
+    # name its listener with sectionName: a parentRef without one attaches to
+    # both listeners. The ai-gateway-ingress
     # CiliumNetworkPolicy admits only the open-webui namespace to it, so
     # cockpit runs and the MCP servers can never reach a pay-per-token model.
     # Ports >= 1024 are not remapped by Envoy Gateway: container port 8080.
