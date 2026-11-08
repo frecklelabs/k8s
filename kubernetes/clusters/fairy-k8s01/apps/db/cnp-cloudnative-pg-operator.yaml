@@ -1,0 +1,44 @@
+---
+# Ingress boundary for the CloudNativePG operator on fairy (C-1217, second
+# staged admission-webhook listener). It selects only the operator pods, not
+# the Postgres instance pods in this namespace. Selecting them puts them in
+# ingress default-deny; egress has no section here and stays unrestricted, so
+# the operator still reaches instance pods, plugins and the apiserver.
+#
+# The apiserver source pattern is the one verified for the cert-manager
+# webhook: the same-node apiserver arrives as the host identity carrying
+# reserved:kube-apiserver, remote apiservers as kube-apiserver + remote-node
+# (no SNAT). kube-apiserver covers both wherever the pods land, so don't
+# narrow it to host or remote-node. Accepted limit: on a control-plane node,
+# other host-network processes share that identity.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cloudnative-pg-operator
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: cloudnative-pg
+      app.kubernetes.io/name: cloudnative-pg
+  ingress:
+    # Admission (Service 443 -> container webhook-server) from the apiserver,
+    # plus kubelet startup/liveness/readiness probes, which hit /readyz on the
+    # same port from the local node.
+    - fromEntities:
+        - kube-apiserver
+        - host
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+    # Metrics scrape (PodMonitor db/cloudnative-pg).
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/component: monitoring
+            app.kubernetes.io/instance: vm
+            app.kubernetes.io/name: vmagent
+            k8s:io.kubernetes.pod.namespace: observability
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
