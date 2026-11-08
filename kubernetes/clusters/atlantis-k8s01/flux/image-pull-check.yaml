@@ -1,6 +1,6 @@
 ---
 # CI's Image Pull check pre-pulls new images onto a node. Talos pulls
-# anonymously, so private freckleapps images are pulled by kubelet instead,
+# anonymously, so private frecklelabs images are pulled by kubelet instead,
 # from a short-lived Pod here that mounts the image as an image volume and
 # never runs it (scripts/pull-private-image.sh). This namespace holds only
 # those Pods, so the existing ghcr-pull Secret it opts in to is readable only

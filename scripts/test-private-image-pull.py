@@ -14,8 +14,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / 'scripts/pull-private-image.sh'
 WORKFLOW = ROOT / '.github/workflows/image-pull-extract-pull.yaml'
-PRIVATE = 'ghcr.io/freckleapps/udev-queue-collector@sha256:' + 'a' * 64
+PRIVATE = 'ghcr.io/frecklelabs/udev-queue-collector@sha256:' + 'a' * 64
 PUBLIC = 'ghcr.io/home-operations/radarr:6.0.0'
+# The org's name before the rename; GHCR does not redirect it.
+OLD_ORG = 'ghcr.io/freckleapps/udev-queue-collector@sha256:' + 'a' * 64
 
 # Stands in for curl against the Kubernetes API. Responses come from
 # scenario.json; every request is appended to requests.jsonl.
@@ -173,8 +175,8 @@ class HelperTests(unittest.TestCase):
         self.assertFalse([r for r in requests if r['method'] == 'POST'])
 
     def test_rejects_refs_outside_private_org_or_with_json_metacharacters(self):
-        for image in (PUBLIC, 'ghcr.io/freckleapps/x", "evil": "1',
-                      'ghcr.io/freckleapps/x:tag\n', 'ghcr.io/freckleapps/'):
+        for image in (PUBLIC, OLD_ORG, 'ghcr.io/frecklelabs/x", "evil": "1',
+                      'ghcr.io/frecklelabs/x:tag\n', 'ghcr.io/frecklelabs/'):
             with self.subTest(image=image):
                 result, requests = self.helper(image=image)
                 self.assertNotEqual(result.returncode, 0)
@@ -210,6 +212,13 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertEqual(talos, [])
         pod = json.loads(next(r for r in requests if r['method'] == 'POST')['data'])
         self.assertEqual(pod['spec']['nodeName'], 'cn01')
+
+    def test_old_org_fails_without_pulling(self):
+        result, requests, talos = self.route(OLD_ORG)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('old freckleapps org', result.stdout)
+        self.assertEqual(talos, [])
+        self.assertEqual(requests, [])
 
     def test_private_pull_failure_fails_the_step(self):
         result, _, talos = self.route(PRIVATE, dict(phases=['Pending'], events=[[PULL_401]]))

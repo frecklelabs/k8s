@@ -233,12 +233,18 @@ jobs:
             [[ -n "${arm}" ]] && target="${arm}"
           fi
           # Talos pulls anonymously (registry auth would be a machine-config
-          # change), so private freckleapps packages go through kubelet on
+          # change), so private frecklelabs packages go through kubelet on
           # the same node with the cluster's existing ghcr-pull Secret. The
           # helper fails closed; nothing is skipped.
           case "${IMAGE}" in
-            ghcr.io/freckleapps/*)
+            ghcr.io/frecklelabs/*)
               ./.image-pull-tools/scripts/pull-private-image.sh "${IMAGE}" "${target}"
+              ;;
+            ghcr.io/freckleapps/*)
+              # The org was renamed and GHCR does not redirect, so these
+              # refs 404 (or would resolve to whoever claims the old name).
+              echo "::error::${IMAGE} uses the old freckleapps org; GHCR does not redirect renamed orgs, use ghcr.io/frecklelabs/"
+              exit 1
               ;;
             *)
               echo "Pulling ${IMAGE} on ${target}"
