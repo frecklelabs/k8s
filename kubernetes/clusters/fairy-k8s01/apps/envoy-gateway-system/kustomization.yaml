@@ -8,5 +8,6 @@ components:
   - ../../../../components/flux-post-build-variables
 resources:
   - ./envoy-gateway.yaml
+  - ./cnp-envoy-gateway.yaml
   - ./envoy-gateway-crds.yaml
   - ./gateway-api.yaml

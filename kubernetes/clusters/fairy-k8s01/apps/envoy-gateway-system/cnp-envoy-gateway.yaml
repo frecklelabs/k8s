@@ -1,0 +1,75 @@
+---
+# Ingress boundary for the Envoy Gateway controller on fairy (C-1217, third
+# staged admission-webhook listener). It selects only the controller pods, not
+# the Envoy proxies. Selecting them puts them in ingress default-deny; egress
+# has no section here and stays unrestricted, so the controller still reaches
+# the apiserver and the AI Gateway extension server.
+#
+# The controller is more than a webhook: it also serves xDS to every Envoy
+# proxy. With deploy type GatewayNamespace the proxies run in each Gateway's
+# own namespace, so the xDS rule matches proxy pods in any namespace. The
+# proxies still authenticate to xDS with their service account token, so the
+# labels alone don't grant config.
+#
+# The apiserver source pattern is the one verified for the cert-manager
+# webhook: the same-node apiserver arrives as the host identity carrying
+# reserved:kube-apiserver, remote apiservers as kube-apiserver + remote-node
+# (no SNAT). kube-apiserver covers both wherever the pod lands, so don't
+# narrow it to host or remote-node. Accepted limit: on a control-plane node,
+# other host-network processes share that identity.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-gateway
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: envoy-gateway
+      app.kubernetes.io/name: gateway-helm
+      control-plane: envoy-gateway
+  ingress:
+    # Admission: topology.webhook.gateway.envoyproxy.io (pods/binding,
+    # Service port webhook 9443). failurePolicy is Ignore, so a block here
+    # shows up as fail-open and slow binds, not as rejected requests.
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+    # Kubelet liveness/readiness probes (/healthz, /readyz).
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    # xDS (18000) and the wasm module cache (18002) for the Envoy proxies.
+    # The rate-limit xDS port 18001 has no client (no rate-limit service is
+    # deployed); enabling one needs a rule here.
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/component: proxy
+            app.kubernetes.io/managed-by: envoy-gateway
+            app.kubernetes.io/name: envoy
+          matchExpressions:
+            - key: k8s:io.kubernetes.pod.namespace
+              operator: Exists
+      toPorts:
+        - ports:
+            - port: "18000"
+              protocol: TCP
+            - port: "18002"
+              protocol: TCP
+    # Metrics (19001). Not scraped today; kept open to vmagent so adding a
+    # scrape doesn't need a policy change.
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/component: monitoring
+            app.kubernetes.io/instance: vm
+            app.kubernetes.io/name: vmagent
+            k8s:io.kubernetes.pod.namespace: observability
+      toPorts:
+        - ports:
+            - port: "19001"
+              protocol: TCP
