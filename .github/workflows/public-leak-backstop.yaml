@@ -4,6 +4,10 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, edited, ready_for_review]
+  # The merge queue needs the same status on each group commit before it
+  # merges; the group is rescanned against its base, not passed through.
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -12,7 +16,7 @@ permissions:
 
 # Serialize edits as well as pushes; an older run must not publish after a newer one.
 concurrency:
-  group: public-leak-backstop-${{ github.event.pull_request.number }}
+  group: public-leak-backstop-${{ github.event.pull_request.number || github.event.merge_group.head_ref }}
   cancel-in-progress: false
 
 jobs:
@@ -21,9 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # pull_request_target supplies trusted base code, never the PR merge/head.
+      # Run trusted base code only: pull_request_target checks out the base
+      # branch, and a merge group pins its base commit, never the group head.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || '' }}
           persist-credentials: false
           fetch-depth: 0
       - name: Scan objects and current PR metadata
