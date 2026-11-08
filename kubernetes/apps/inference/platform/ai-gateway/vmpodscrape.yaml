@@ -9,7 +9,7 @@ spec:
       gateway.envoyproxy.io/owning-gateway-name: ai
       gateway.envoyproxy.io/owning-gateway-namespace: inference
   podMetricsEndpoints:
-    # Ext-proc uses a separate admin endpoint from Envoy's proxy metrics.
+    # Ext-proc uses a separate admin endpoint from Envoy's proxy metrics (below).
     - port: aigw-admin
       scheme: http
       path: /metrics
@@ -18,4 +18,17 @@ spec:
       metricRelabelConfigs:
         - sourceLabels: [__name__]
           regex: gen_ai_.*
+          action: keep
+    # Envoy's own proxy stats (C-1371): upstream errors and endpoint membership
+    # per backend cluster, which the ext-proc gen_ai_* series can't show (a
+    # connect failure never reaches ext-proc's response phase). Tight allowlist
+    # to keep cardinality down: Envoy exposes far more envoy_* series than these.
+    - port: metrics
+      scheme: http
+      path: /stats/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+      metricRelabelConfigs:
+        - sourceLabels: [__name__]
+          regex: envoy_cluster_(upstream_rq_xx|upstream_rq_total|upstream_rq_retry|upstream_cx_connect_fail|membership_healthy|membership_total)|envoy_http_downstream_rq_xx
           action: keep
