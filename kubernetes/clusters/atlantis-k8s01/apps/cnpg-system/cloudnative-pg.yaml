@@ -25,3 +25,20 @@ spec:
   timeout: 5m
   prune: true
   wait: true
+  # C-72: atlantis reads the CNPG substitution values from GSM, like fairy's
+  # db overlay. The shared ExternalSecret keeps its 1Password default.
+  patches:
+    - target:
+        kind: ExternalSecret
+        name: namespace-post-build-secrets
+      patch: |-
+        - op: replace
+          path: /spec/secretStoreRef
+          value:
+            kind: SecretStore
+            name: gcp-sm
+        - op: replace
+          path: /spec/dataFrom/0/extract
+          value:
+            key: ${CLUSTER_NAME}-cnpg-system-namespace-post-build-secrets
+            version: "1"
