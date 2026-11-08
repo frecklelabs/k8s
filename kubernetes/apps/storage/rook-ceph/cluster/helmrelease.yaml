@@ -240,8 +240,6 @@ spec:
             policy: mute
           AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE:
             policy: mute
-      storage:
-        encryptedDevice: true
     # default values, remove once I don't need a single node cluster
     cephBlockPools:
       - name: ceph-blockpool

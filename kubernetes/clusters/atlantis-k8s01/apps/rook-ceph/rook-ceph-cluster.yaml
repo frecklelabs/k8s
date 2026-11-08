@@ -24,10 +24,3 @@ spec:
   timeout: 30m
   prune: false
   wait: true
-  patches:
-    - target:
-        kind: HelmRelease
-        name: rook-ceph-cluster
-      patch: |-
-        - op: remove
-          path: /spec/values/cephClusterSpec/storage/encryptedDevice
