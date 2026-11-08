@@ -1,4 +1,6 @@
 ---
+# Class for both Atlantis subnet routers: required anti-affinity keeps them on
+# separate nodes. Named for the addition; renaming would restart both routers.
 apiVersion: tailscale.com/v1alpha1
 kind: ProxyClass
 metadata:
