@@ -10,5 +10,6 @@ components:
 resources:
   - ./external-secrets.yaml
   - ./cloudnative-pg.yaml
+  - ./cnp-cloudnative-pg-operator.yaml
   - ./barman-plugin.yaml
   - ./dragonfly-operator.yaml
