@@ -1,0 +1,208 @@
+---
+# Paid cloud models through OpenRouter (C-1170). Fairy-only, cluster tree, like
+# route.yaml. Only the gateway holds the OpenRouter keys; clients never do.
+#
+# Two OpenRouter workspaces/keys, managed in frecklelabs/tofu
+# (platform/openrouter.tf, docs/openrouter.md), each capped per month:
+#   - zdr:      the workspace guardrail enforces zero data retention for every
+#               provider group, Safety Retention endpoints excluded. A model
+#               with no ZDR endpoint is refused by OpenRouter, not rerouted.
+#   - standard: no ZDR. Wired up below but has NO route yet, so nothing can
+#               call it. When a non-ZDR model is wanted, add an AIGatewayRoute
+#               rule named no-zdr/<upstream-id> on the cloud listener, and
+#               label the model "(no ZDR)" in every client.
+#
+# Every route here attaches only to the Gateway's `cloud` listener (port
+# 8080), which the ai-gateway-ingress CiliumNetworkPolicy opens to the
+# open-webui namespace alone. Never add these models to inference-mcp's
+# models.yaml or the cockpit router.
+#
+# The keys rotate when tofu applies (every 60 days, expiry +30 days);
+# ESO refreshes the Secrets hourly.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: openrouter-zdr-api-key
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: openrouter-zdr-api-key
+  data:
+    - secretKey: apiKey
+      remoteRef:
+        key: fairy-k8s01-inference-openrouter-zdr-api-key
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: openrouter-standard-api-key
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: openrouter-standard-api-key
+  data:
+    - secretKey: apiKey
+      remoteRef:
+        key: fairy-k8s01-inference-openrouter-standard-api-key
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: openrouter
+spec:
+  endpoints:
+    - fqdn:
+        hostname: openrouter.ai
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: openrouter
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: openrouter
+  validation:
+    wellKnownCACertificates: System
+    hostname: openrouter.ai
+---
+# Both AIServiceBackends share the one Backend; the key (and so the workspace
+# and its ZDR guardrail) is what tells them apart.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-zdr
+spec:
+  schema:
+    name: OpenAI
+    prefix: /api/v1
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: openrouter
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: openrouter-zdr
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: openrouter-zdr
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: openrouter-zdr-api-key
+---
+# Standard (no ZDR). No route references this backend yet; see the header.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-standard-no-zdr
+spec:
+  schema:
+    name: OpenAI
+    prefix: /api/v1
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: openrouter
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: openrouter-standard-no-zdr
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: openrouter-standard-no-zdr
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: openrouter-standard-api-key
+---
+# ZDR models. Clients send zdr/<OpenRouter model id>; the override rewrites it
+# to the upstream id. IDs checked against OpenRouter's public model endpoints
+# list on 2026-11-08 (each has ZDR endpoints: Bedrock/Google/Azure for Claude,
+# Azure for GPT, open-model hosts for gpt-oss and Qwen).
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: openrouter-zdr
+spec:
+  parentRefs:
+    - name: ai
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: cloud
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/anthropic/claude-opus-5.5
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: anthropic/claude-opus-5.5
+      timeouts:
+        request: 1800s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/anthropic/claude-sonnet-5.5
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: anthropic/claude-sonnet-5.5
+      timeouts:
+        request: 1800s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/openai/gpt-6.1-sol
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: openai/gpt-6.1-sol
+      timeouts:
+        request: 1800s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/openai/gpt-6.1-terra
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: openai/gpt-6.1-terra
+      timeouts:
+        request: 1800s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/openai/gpt-oss-120b
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: openai/gpt-oss-120b
+      timeouts:
+        request: 1800s
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: zdr/qwen/qwen3.8-27b
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: qwen/qwen3.8-27b
+      timeouts:
+        request: 1800s

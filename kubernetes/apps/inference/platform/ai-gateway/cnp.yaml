@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
+# Ingress to the ai Gateway's Envoy pods (C-1170). Before this policy nothing
+# selected these pods, so every port was open in-cluster. The local listener
+# (10080) and the probe/metrics ports stay open to the whole cluster, as
+# before. The cloud listener (8080, paid OpenRouter models) is admitted only
+# from the open-webui namespace: agent-runs, ai-mcp (inference-mcp) and
+# agent-platform (the cockpit router) get no allow, so their packets to 8080
+# are dropped. No egress section: egress stays unenforced (the pods dial
+# OpenRouter, the vLLM backends and the EG controller's xDS).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ai-gateway-ingress
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: ai
+      gateway.envoyproxy.io/owning-gateway-namespace: inference
+  ingress:
+    # Local models listener, kubelet probes, Envoy and ext-proc metrics.
+    - fromEntities:
+        - cluster
+      toPorts:
+        - ports:
+            - port: "10080"
+              protocol: TCP
+            - port: "19001"
+              protocol: TCP
+            - port: "19002"
+              protocol: TCP
+            - port: "19003"
+              protocol: TCP
+            - port: "1064"
+              protocol: TCP
+    # Cloud listener: open-webui only.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: open-webui
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
