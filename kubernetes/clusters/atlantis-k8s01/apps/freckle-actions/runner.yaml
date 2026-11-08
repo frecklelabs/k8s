@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app freckle-actions-runner
+  namespace: &namespace freckle-actions
+  labels:
+    infra.freckle.systems/post-build-variables: enabled
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: actions-runner-controller
+      namespace: actions-runner-system
+    - name: freckle-actions-secrets
+      namespace: flux-system
+  interval: 1h
+  path: ./kubernetes/apps/actions-runner-controller/runners/freckle-actions
+  prune: true
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  timeout: 5m
+  wait: false
