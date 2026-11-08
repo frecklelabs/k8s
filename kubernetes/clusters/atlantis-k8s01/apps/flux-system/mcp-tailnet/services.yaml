@@ -1,0 +1,28 @@
+# Tailnet endpoints for the read-only MCP servers, added next to the Cluster
+# Mesh exports so the cross-site path can move off the mesh one caller at a
+# time. Each Service rides the shared ingress-proxy ProxyGroup as an HA
+# Tailscale Service. Every Atlantis MCP shares one tag: the only caller is
+# fairy's agentgateway through its egress ProxyGroup, and the tailnet policy
+# cannot tell its pods apart, so per-MCP tags would add no isolation. The
+# cockpit gate and agentgateway decide what an agent may call. Nothing uses
+# these names yet.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux-operator-mcp-tailnet
+  annotations:
+    tailscale.com/hostname: atlantis-flux-mcp
+    tailscale.com/proxy-group: ingress-proxy
+    tailscale.com/tags: tag:atlantis-k8s01-mcp
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/instance: flux-operator-mcp
+    app.kubernetes.io/name: flux-operator-mcp
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+      protocol: TCP

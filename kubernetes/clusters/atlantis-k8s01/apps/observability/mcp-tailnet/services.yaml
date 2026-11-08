@@ -1,0 +1,68 @@
+# Tailnet endpoints for the read-only MCP servers, added next to the Cluster
+# Mesh exports so the cross-site path can move off the mesh one caller at a
+# time. Each Service rides the shared ingress-proxy ProxyGroup as an HA
+# Tailscale Service. Every Atlantis MCP shares one tag: the only caller is
+# fairy's agentgateway through its egress ProxyGroup, and the tailnet policy
+# cannot tell its pods apart, so per-MCP tags would add no isolation. The
+# cockpit gate and agentgateway decide what an agent may call. Nothing uses
+# these names yet.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-victoriametrics-tailnet
+  annotations:
+    tailscale.com/hostname: atlantis-vmetrics-mcp
+    tailscale.com/proxy-group: ingress-proxy
+    tailscale.com/tags: tag:atlantis-k8s01-mcp
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/instance: mcp-victoriametrics
+    app.kubernetes.io/name: victoria-metrics-mcp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-victorialogs-tailnet
+  annotations:
+    tailscale.com/hostname: atlantis-vlogs-mcp
+    tailscale.com/proxy-group: ingress-proxy
+    tailscale.com/tags: tag:atlantis-k8s01-mcp
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/instance: mcp-victorialogs
+    app.kubernetes.io/name: victoria-logs-mcp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-victoriatraces-tailnet
+  annotations:
+    tailscale.com/hostname: atlantis-vtraces-mcp
+    tailscale.com/proxy-group: ingress-proxy
+    tailscale.com/tags: tag:atlantis-k8s01-mcp
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/instance: mcp-victoriatraces
+    app.kubernetes.io/name: mcp-victoriatraces
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP

@@ -4,3 +4,4 @@ kind: Kustomization
 namespace: ai-mcp
 resources:
   - ./services.yaml
+  - ./tailnet.yaml

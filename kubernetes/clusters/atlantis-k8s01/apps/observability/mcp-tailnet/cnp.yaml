@@ -1,0 +1,64 @@
+# Lets the local Tailscale ingress proxies (and nothing else new) reach the
+# MCP port, so the tailnet Service next to this file works. It adds to the
+# existing allow-list policy for these pods; the tailnet policy decides who
+# may reach the proxies, and only fairy's egress proxies and admins may.
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-victoriametrics-tailnet
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mcp-victoriametrics
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource-type: proxygroup
+            tailscale.com/parent-resource: ingress-proxy
+      toPorts:
+        - ports:
+            - port: http
+              protocol: TCP
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-victorialogs-tailnet
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mcp-victorialogs
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource-type: proxygroup
+            tailscale.com/parent-resource: ingress-proxy
+      toPorts:
+        - ports:
+            - port: http
+              protocol: TCP
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-victoriatraces-tailnet
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: mcp-victoriatraces
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource-type: proxygroup
+            tailscale.com/parent-resource: ingress-proxy
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
