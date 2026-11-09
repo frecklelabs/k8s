@@ -74,6 +74,17 @@ spec:
         login: true
         passwordSecret:
           name: bookorbit-db-role
+      - name: seedbank
+        ensure: present
+        login: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 10
+        passwordSecret:
+          name: seedbank-db-role
       - name: accession
         ensure: present
         login: true
