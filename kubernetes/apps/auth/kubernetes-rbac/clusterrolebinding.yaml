@@ -1,0 +1,18 @@
+---
+# People signing in to the API server with freckle.id (Pocket ID) carry their
+# groups as freckle-id:<group> (docs/networking/kubernetes-oidc.md). Bind
+# groups only, never freckle-id:<user>, so access follows group membership in
+# Pocket ID. Inert until the API server trusts the issuer
+# (talos/control-plane/03-authentication.yaml).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: freckle-id-k8s-admins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: freckle-id:k8s-admins

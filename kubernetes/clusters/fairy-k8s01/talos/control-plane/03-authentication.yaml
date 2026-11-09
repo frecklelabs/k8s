@@ -1,0 +1,37 @@
+---
+# kube-apiserver accepts freckle.id (Pocket ID) ID tokens from the
+# kubernetes-fairy client, for people signing in with kubectl oidc-login
+# (docs/networking/kubernetes-oidc.md). Only this cluster's client is an
+# audience, so a token minted for the other cluster gets a 401 here.
+# freckle.id being down only breaks these logins; the Talos admin kubeconfig
+# (client certificate) is the break-glass path and doesn't depend on it.
+#
+# Talos renders this as apiserver.config.k8s.io/v1beta1 and applies it live.
+# Apply one control-plane node at a time and check /readyz after each.
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+configuration:
+  # Talos's default: unauthenticated health checks only. Restated so this
+  # document can't drop it.
+  anonymous:
+    enabled: true
+    conditions:
+      - path: /livez
+      - path: /readyz
+      - path: /healthz
+  jwt:
+    - issuer:
+        url: https://freckle.id
+        audiences:
+          - kubernetes-fairy
+      claimValidationRules:
+        - expression: "has(claims.preferred_username) && claims.preferred_username != ''"
+          message: freckle.id token has no preferred_username
+      # CEL mappings carry the prefix inside the expression (no prefix field).
+      claimMappings:
+        username:
+          expression: "'freckle-id:' + claims.preferred_username"
+        groups:
+          expression: "has(claims.groups) ? claims.groups.map(g, 'freckle-id:' + g) : []"
+        uid:
+          expression: claims.sub
