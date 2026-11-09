@@ -1,0 +1,13 @@
+---
+# Replay workloads are delivered separately; keep their namespace independent
+# of workload pruning and enforce restricted Pod Security from the start.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-replay
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    freckle.systems/ghcr-pull: "true"
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
