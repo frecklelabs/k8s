@@ -2,11 +2,20 @@
 // App (cockpit C-9). Per-run values come from env: RENOVATE_TOKEN (run.mjs),
 // RENOVATE_HOST_RULES (ExternalSecret renovate-host-rules),
 // RENOVATE_AUTODISCOVER_FILTER (cronjob.yaml). Repo-level settings belong in each repo's
-// .renovaterc.json5 and the shared presets in frecklelabs/k8s//.renovate/,
-// not here.
+// .renovaterc.json5 and the shared presets in frecklelabs/k8s//.renovate/.
+// The rebase policy is enforced here across existing repo configs (C-1580).
 {
   platform: 'github',
   autodiscover: true,
+  // A normal global default loses to the explicit behind-base-branch setting
+  // in existing repos. force survives repo, manager and package-rule merges.
+  // Rebase only on conflicts: moving main must not rebuild every open PR.
+  // The automerging repos either use a merge queue or do not require branches
+  // to be up to date. If that changes, add a documented per-repository force
+  // override in repositories[] for the strict repo without a queue.
+  force: {
+    rebaseWhen: 'conflicted',
+  },
   // A repo without a Renovate config of its own gets one "Configure
   // Renovate" PR adding onboardingConfig as .renovaterc.json5, and nothing
   // else until that PR merges (C-9). The shape matches the configs in ops,
@@ -25,7 +34,7 @@
       ':semanticCommits',
       ':timezone(America/Chicago)',
     ],
-    rebaseWhen: 'behind-base-branch',
+    rebaseWhen: 'conflicted',
     dependencyDashboardTitle: 'Renovate Dashboard 🤖',
     mise: {
       enabled: true,
