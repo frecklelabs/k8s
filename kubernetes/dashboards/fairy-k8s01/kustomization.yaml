@@ -9,3 +9,4 @@ resources:
   - ../storage/ceph-osd-single.yaml
   - ../storage/ceph-pools.yaml
   - ../power/solar-assistant.yaml
+  - ../media/torrent-bandwidth.yaml
