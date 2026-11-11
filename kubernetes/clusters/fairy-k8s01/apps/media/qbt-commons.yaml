@@ -70,26 +70,30 @@ spec:
           path: /spec/values/defaultPodOptions/nodeSelector
           value:
             networks.freckle.systems/dmz-qbt: present
-    # eth0 carries DNS and nothing else outward. The shared policy lets the
-    # other instances reach the internet through the cluster; here that path
-    # is closed, so a missing DMZ route or an IPv6 peer is dropped instead of
-    # leaving from the cluster's own addresses.
+        # Public resolvers, not cluster DNS: their addresses route out of the
+        # DMZ interface, so lookups take the same path as the torrent traffic.
+        # Nothing in this pod needs to resolve a cluster name.
+        - op: add
+          path: /spec/values/defaultPodOptions/dnsPolicy
+          value: None
+        - op: add
+          path: /spec/values/defaultPodOptions/dnsConfig
+          value:
+            nameservers:
+              - 1.1.1.1
+              - 1.0.0.1
+    # eth0 carries nothing outward (replies to the WebUI's callers still
+    # flow). The shared policy lets the other instances reach the internet
+    # through the cluster; here that path is closed, so a missing DMZ route or
+    # an IPv6 peer is dropped instead of leaving from the cluster's addresses.
     - target:
         kind: CiliumNetworkPolicy
         name: .*-egress
       patch: |-
+        # One empty rule: egress is enforced and nothing matches it.
         - op: replace
           path: /spec/egress
           value:
-            - toEndpoints:
-                - matchLabels:
-                    k8s:io.kubernetes.pod.namespace: kube-system
-                    k8s-app: kube-dns
-              toPorts:
-                - ports:
-                    - port: "53"
-                      protocol: UDP
-                    - port: "53"
-                      protocol: TCP
+            - {}
         - op: remove
           path: /spec/egressDeny
