@@ -8,9 +8,6 @@ metadata:
   labels:
     infra.freckle.systems/post-build-variables: enabled
 spec:
-  # C-147: enable after the router network exists and both gateway variables
-  # are supplied through the private post-build configuration.
-  suspend: true
   targetNamespace: *namespace
   commonMetadata:
     labels:
