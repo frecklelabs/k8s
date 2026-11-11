@@ -32,6 +32,8 @@ spec:
     pg_hba:
       - host bookorbit bookorbit_read all scram-sha-256
       - host all bookorbit_read all reject
+      - host seedbank seedbank_read all scram-sha-256
+      - host all seedbank_read all reject
   nodeMaintenanceWindow:
     inProgress: false
     reusePVC: true
@@ -153,6 +155,21 @@ spec:
           - pg_read_all_data
         passwordSecret:
           name: bookorbit-read-db-role
+
+      # Explicit column grants are maintained by the private db-read manifests.
+      # No predefined read-all role: credential storage must remain inaccessible.
+      - name: seedbank_read
+        ensure: present
+        login: true
+        inherit: false
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        bypassrls: false
+        connectionLimit: 3
+        passwordSecret:
+          name: seedbank-read-db-role
 
       - name: windmill_user
         ensure: present
