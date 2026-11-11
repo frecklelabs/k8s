@@ -28,7 +28,6 @@ spec:
   path: ./kubernetes/apps/media/autobrr
   components:
     - ../../../components/volsync-rsync-tls
-    - ../../../components/autobrr-announce-relay
   interval: 2m
   retryInterval: 1m
   timeout: 5m
@@ -37,7 +36,6 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      SEEDBANK_ANNOUNCE_RELAY_TAG: main-20261111T034304Z-a21f2ac@sha256:e274cedec18657e8518c1e653fbe7f779003360400c9f8d92991b4e040788d3b
       VOLSYNC_UID: "1000"
       VOLSYNC_CAPACITY: 1Gi
       VOLSYNC_SCHEDULE: "28 * * * *"
