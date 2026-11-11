@@ -1,0 +1,970 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/grafana.integreatly.org/grafanadashboard_v1beta1.json
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: torrent-bandwidth
+spec:
+  allowCrossNamespaceImport: false
+  folder: Media
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  resyncPeriod: 10m0s
+  json: |
+    {
+      "title": "Torrent bandwidth",
+      "uid": "torrent-bandwidth",
+      "tags": [
+        "media",
+        "torrents"
+      ],
+      "timezone": "browser",
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "refresh": "1m",
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "type": "row",
+          "title": "fairy",
+          "id": 1,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Download now (fairy)",
+          "id": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 1
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "8 * (sum(sum by (client) (label_replace(rate(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[5m]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\"))))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Upload now (fairy)",
+          "id": 3,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 1
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "8 * (sum(sum by (client) (label_replace(rate(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[5m]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\"))))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Downloaded today (fairy, last 24 h)",
+          "id": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 1
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[24h]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Uploaded today (fairy, last 24 h)",
+          "id": 5,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 1
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[24h]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Download rate by client (fairy)",
+          "id": 6,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "8 * (sum by (client) (label_replace(rate(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[$__rate_interval]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "{{client}}"
+            },
+            {
+              "refId": "L",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "vector($fairy_down_bps)",
+              "legendFormat": "link limit"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "fillOpacity": 20,
+                "stacking": {
+                  "mode": "normal"
+                },
+                "lineWidth": 1,
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "max": null,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "transparent",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "link limit"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Upload rate by client (fairy)",
+          "id": 7,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "8 * (sum by (client) (label_replace(rate(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[$__rate_interval]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "{{client}}"
+            },
+            {
+              "refId": "L",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "vector($fairy_up_bps)",
+              "legendFormat": "link limit"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "fillOpacity": 20,
+                "stacking": {
+                  "mode": "normal"
+                },
+                "lineWidth": 1,
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "max": null,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "transparent",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "link limit"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "type": "barchart",
+          "title": "Daily volume (fairy)",
+          "id": 8,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 14
+          },
+          "interval": "1d",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[1d]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "downloaded",
+              "interval": "1d"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[1d]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "uploaded",
+              "interval": "1d"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "options": {
+            "xTickLabelRotation": -45,
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "atlantis",
+          "id": 9,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 22
+          },
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Download now (atlantis)",
+          "id": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 23
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "8 * (sum(sum by (client) (label_replace(rate(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[5m]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\"))))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Upload now (atlantis)",
+          "id": 11,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 23
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "8 * (sum(sum by (client) (label_replace(rate(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[5m]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\"))))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "area"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Downloaded today (atlantis, last 24 h)",
+          "id": 12,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 23
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[24h]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Uploaded today (atlantis, last 24 h)",
+          "id": 13,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 23
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[24h]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "value",
+            "graphMode": "none"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Download rate by client (atlantis)",
+          "id": 14,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 27
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "8 * (sum by (client) (label_replace(rate(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[$__rate_interval]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "{{client}}"
+            },
+            {
+              "refId": "L",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "vector($atlantis_down_bps)",
+              "legendFormat": "link limit"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "fillOpacity": 20,
+                "stacking": {
+                  "mode": "normal"
+                },
+                "lineWidth": 1,
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "max": null,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "transparent",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "link limit"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Upload rate by client (atlantis)",
+          "id": 15,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 27
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "8 * (sum by (client) (label_replace(rate(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[$__rate_interval]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "{{client}}"
+            },
+            {
+              "refId": "L",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "vector($atlantis_up_bps)",
+              "legendFormat": "link limit"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps",
+              "custom": {
+                "fillOpacity": 20,
+                "stacking": {
+                  "mode": "normal"
+                },
+                "lineWidth": 1,
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "max": null,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "transparent",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "link limit"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "type": "barchart",
+          "title": "Daily volume (atlantis)",
+          "id": 16,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seeding-atlantis-k8s01"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 36
+          },
+          "interval": "1d",
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_receive_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[1d]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "downloaded",
+              "interval": "1d"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "seeding-atlantis-k8s01"
+              },
+              "expr": "sum(sum by (client) (label_replace(increase(container_network_transmit_bytes_total{namespace=\"media\",pod=~\"qbt-(reel|ink)-[a-z0-9]+-[a-z0-9]+\",interface!=\"lo\"}[1d]), \"client\", \"$1\", \"pod\", \"qbt-(reel|ink)-.*\")))",
+              "legendFormat": "uploaded",
+              "interval": "1d"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "options": {
+            "xTickLabelRotation": -45,
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        }
+      ],
+      "description": "qBittorrent client bandwidth from per-pod network counters; includes WebUI/API overhead. Rates use decimal bits per second. Dashed red lines show per-site, per-direction link limits configured by dashboard constants. Volume stats use rolling 24-hour windows; daily bars use one-day increases.",
+      "templating": {
+        "list": [
+          {
+            "type": "constant",
+            "name": "fairy_down_bps",
+            "label": "fairy download link (bps)",
+            "query": "1000000000",
+            "hide": 2
+          },
+          {
+            "type": "constant",
+            "name": "fairy_up_bps",
+            "label": "fairy upload link (bps)",
+            "query": "1000000000",
+            "hide": 2
+          },
+          {
+            "type": "constant",
+            "name": "atlantis_down_bps",
+            "label": "atlantis download link (bps)",
+            "query": "1000000000",
+            "hide": 2
+          },
+          {
+            "type": "constant",
+            "name": "atlantis_up_bps",
+            "label": "atlantis upload link (bps)",
+            "query": "1000000000",
+            "hide": 2
+          }
+        ]
+      }
+    }
