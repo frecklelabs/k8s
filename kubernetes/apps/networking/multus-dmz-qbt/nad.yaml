@@ -1,7 +1,12 @@
 ---
-# More-specific public routes preserve eth0 for cluster traffic. IPv6 uses
-# the router's link-local gateway so a delegated-prefix change needs no edit.
-# The attachment supplies a static IPv4 address and a stable MAC for SLAAC.
+# The torrent DMZ (VLAN 1100, IPv4 only): a second interface for qBittorrent
+# pods, which send their torrent traffic out of it instead of the cluster's
+# own egress. The routes cover every public IPv4 range and leave 10.0.0.0/8,
+# so cluster traffic (the WebUI, DNS) stays on eth0.
+#
+# Each pod names its own address in its networks annotation. The MTU matches
+# the tunnel the router sends this VLAN through, so nothing has to fragment.
+# IPv6 is switched off on the interface: the VLAN carries none.
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
@@ -16,7 +21,7 @@ spec:
           "type": "macvlan",
           "master": "bond0.1100",
           "mode": "bridge",
-          "mtu": 1500,
+          "mtu": 1420,
           "capabilities": {
             "mac": true,
             "ips": true
@@ -24,50 +29,21 @@ spec:
           "ipam": {
             "type": "static",
             "routes": [
-              {
-                "dst": "0.0.0.0/5",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "8.0.0.0/7",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "11.0.0.0/8",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "12.0.0.0/6",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "16.0.0.0/4",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "32.0.0.0/3",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "64.0.0.0/2",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "128.0.0.0/1",
-                "gw": "${QBT_DMZ_IPV4_GATEWAY}"
-              },
-              {
-                "dst": "2000::/3",
-                "gw": "${QBT_DMZ_IPV6_GATEWAY}"
-              }
+              { "dst": "0.0.0.0/5", "gw": "10.255.110.1" },
+              { "dst": "8.0.0.0/7", "gw": "10.255.110.1" },
+              { "dst": "11.0.0.0/8", "gw": "10.255.110.1" },
+              { "dst": "12.0.0.0/6", "gw": "10.255.110.1" },
+              { "dst": "16.0.0.0/4", "gw": "10.255.110.1" },
+              { "dst": "32.0.0.0/3", "gw": "10.255.110.1" },
+              { "dst": "64.0.0.0/2", "gw": "10.255.110.1" },
+              { "dst": "128.0.0.0/1", "gw": "10.255.110.1" }
             ]
           }
         },
         {
           "type": "tuning",
           "sysctl": {
-            "net.ipv6.conf.IFNAME.accept_ra_defrtr": "0",
-            "net.ipv6.conf.IFNAME.use_tempaddr": "0"
+            "net.ipv6.conf.IFNAME.disable_ipv6": "1"
           }
         }
       ]

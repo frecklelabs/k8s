@@ -18,6 +18,7 @@ resources:
   - ./webhook.yaml
   - ./qbt-reel.yaml
   - ./qbt-ink.yaml
+  - ./qbt-commons.yaml
   - ./qui.yaml
   - ./watchstate.yaml
   - ./autobrr.yaml
