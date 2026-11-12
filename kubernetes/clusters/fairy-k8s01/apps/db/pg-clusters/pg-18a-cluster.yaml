@@ -210,7 +210,7 @@ spec:
         createdb: false
         createrole: false
         replication: false
-        connectionLimit: 50
+        connectionLimit: 90
         passwordSecret:
           name: silo-db-role
 
