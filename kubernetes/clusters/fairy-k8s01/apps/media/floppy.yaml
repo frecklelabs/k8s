@@ -8,7 +8,7 @@ metadata:
   labels:
     infra.freckle.systems/post-build-variables: enabled
 spec:
-  suspend: true
+  suspend: false
   targetNamespace: *namespace
   commonMetadata:
     labels:
