@@ -1,0 +1,63 @@
+---
+# App OIDC is user-specific; the gateway also protects startup recovery pages.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: floppy
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: floppy
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: gateway-system
+            gateway.envoyproxy.io/owning-gateway-name: tailnet
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app.kubernetes.io/name: jellyfin
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: db
+            cnpg.io/cluster: pg-18a
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app.kubernetes.io/name: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP
+    - toFQDNs:
+        - matchName: freckle.id
+        - matchName: api.themoviedb.org
+        - matchName: image.tmdb.org
+        - matchName: api.thetvdb.com
+        - matchName: api4.thetvdb.com
+        - matchName: api.myanimelist.net
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

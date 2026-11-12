@@ -48,6 +48,17 @@ spec:
   # in <tenant>-db.yaml in this directory.
   managed:
     roles:
+      - name: floppy
+        ensure: present
+        login: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 30
+        passwordSecret:
+          name: floppy-db-role
       - name: mealie
         ensure: present
         login: true

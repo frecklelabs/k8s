@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app floppy
+  namespace: &namespace media
+  labels:
+    infra.freckle.systems/post-build-variables: enabled
+spec:
+  suspend: true
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: external-secrets
+    - name: cloudnative-pg-clusters
+      namespace: db
+    - name: volsync
+      namespace: volsync-system
+    - name: truenas-csi
+      namespace: truenas-csi
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/apps/media/floppy
+  components:
+    - ../../../components/volsync-rsync-tls
+  interval: 2m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: false
+  postBuild:
+    substitute:
+      APP: *app
+      FLOPPY_DB_HOST: pg-18a-rw.db.svc.cluster.local
+      VOLSYNC_UID: "1000"
+      VOLSYNC_CAPACITY: 5Gi
+      VOLSYNC_SCHEDULE: "43 * * * *"

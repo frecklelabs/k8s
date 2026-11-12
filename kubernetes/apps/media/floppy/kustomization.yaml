@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://www.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - externalsecret.yaml
+  - helmrelease.yaml
+  - cnp.yaml
+  - oidc.yaml
+configMapGenerator:
+  - name: floppy-bootstrap
+    files:
+      - bootstrap.py
+generatorOptions:
+  disableNameSuffixHash: true
