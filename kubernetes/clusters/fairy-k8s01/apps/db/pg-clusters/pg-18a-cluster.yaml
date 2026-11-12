@@ -191,6 +191,17 @@ spec:
         - windmill_user
         passwordSecret:
           name: windmill-db-role
+      - name: silo
+        ensure: present
+        login: true
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 50
+        passwordSecret:
+          name: silo-db-role
 
   plugins:
     - name: barman-cloud.cloudnative-pg.io

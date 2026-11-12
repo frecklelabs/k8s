@@ -1,0 +1,43 @@
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: silo-db-role
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: silo-db-role
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      metadata:
+        labels:
+          cnpg.io/reload: "true"
+      data:
+        username: "{{ .username }}"
+        password: "{{ .password }}"
+  dataFrom:
+    - extract:
+        key: ${CLUSTER_NAME}-db-silo-role
+---
+# Pre-create extensions so application migrations need no superuser rights.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: pg-18a-silo
+spec:
+  name: silo
+  owner: silo
+  cluster:
+    name: pg-18a
+  ensure: present
+  extensions:
+    - name: vector
+      ensure: present
+    - name: pg_trgm
+      ensure: present
+    - name: citext
+      ensure: present
