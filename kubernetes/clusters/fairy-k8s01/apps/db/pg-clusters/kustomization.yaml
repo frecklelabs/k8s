@@ -12,5 +12,6 @@ resources:
   - ./paperless-db.yaml
   - ./grafana-db.yaml
   - ./bookorbit-db.yaml
+  - ./silo-db.yaml
   - ./cockpit-db.yaml
   - ./package-proxy-db.yaml
