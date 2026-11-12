@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: silo
+  namespace: media
+spec:
+  targetNamespace: media
+  dependsOn:
+    - name: external-secrets
+      namespace: external-secrets
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+    - name: cloudnative-pg-clusters
+      namespace: db
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/apps/media/silo
+  interval: 2m
+  retryInterval: 1m
+  timeout: 130m
+  prune: true
+  deletionPolicy: Orphan
+  wait: true
+  postBuild:
+    substitute:
+      SILO_DATABASE_HOST: pg-18a-rw.db.svc.cluster.local
+      SILO_MEDIA_CLAIM: store01-vault01-media
+      SILO_MEDIA_MOUNT: /store01/vault01
+    substituteFrom:
+      - kind: ConfigMap
+        name: k8s-cluster-info
+  patches:
+    # A single migration writer must pass acceptance before the second slot.
+    - target:
+        kind: Deployment
+        name: silo-b
+      patch: |-
+        - op: replace
+          path: /spec/replicas
+          value: 0

@@ -78,7 +78,21 @@ spec:
       - name: silo
         image: ghcr.io/silo-server/silo-server:build-2213@sha256:2a242495855cf002fda78ddbd308d34013595b333a6469cf07ab971f3b8ae309
         command:
-        - /usr/local/bin/silo
+        - /bin/sh
+        - -ec
+        - |
+          # Device permissions must be checked before migrations or listeners.
+          id
+          found=0
+          for device in /dev/dri/renderD*; do
+            [ -c "$device" ] || continue
+            found=1
+            stat -c 'render-device=%n uid=%u gid=%g mode=%a' "$device"
+            [ -r "$device" ] && [ -w "$device" ] || exit 1
+            ( : <> "$device" ) || exit 1
+          done
+          [ "$found" -eq 1 ] || exit 1
+          exec /usr/local/bin/silo
         env:
         - name: MODE
           value: integrated
@@ -249,7 +263,21 @@ spec:
       - name: silo
         image: ghcr.io/silo-server/silo-server:build-2213@sha256:2a242495855cf002fda78ddbd308d34013595b333a6469cf07ab971f3b8ae309
         command:
-        - /usr/local/bin/silo
+        - /bin/sh
+        - -ec
+        - |
+          # Device permissions must be checked before migrations or listeners.
+          id
+          found=0
+          for device in /dev/dri/renderD*; do
+            [ -c "$device" ] || continue
+            found=1
+            stat -c 'render-device=%n uid=%u gid=%g mode=%a' "$device"
+            [ -r "$device" ] && [ -w "$device" ] || exit 1
+            ( : <> "$device" ) || exit 1
+          done
+          [ "$found" -eq 1 ] || exit 1
+          exec /usr/local/bin/silo
         env:
         - name: MODE
           value: integrated
