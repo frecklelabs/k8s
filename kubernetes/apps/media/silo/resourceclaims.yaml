@@ -1,0 +1,24 @@
+# Each slot shares its claim across old/new pods during a surge update.
+# Different slots hold different exclusive devices. Node loss needs reallocation.
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaim
+metadata:
+  name: silo-a
+spec:
+  devices:
+    requests:
+    - name: gpu
+      exactly:
+        deviceClassName: gpu.intel.com
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaim
+metadata:
+  name: silo-b
+spec:
+  devices:
+    requests:
+    - name: gpu
+      exactly:
+        deviceClassName: gpu.intel.com
