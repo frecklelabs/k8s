@@ -35,3 +35,4 @@ resources:
   - ./storyteller.yaml
   - ./readalong.yaml
   - ./floppy.yaml
+  - ./silo.yaml

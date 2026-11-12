@@ -82,7 +82,7 @@ spec:
       volumes:
       - name: config
         secret:
-          secretName: silo-secrets
+          secretName: silo-valkey-config
           defaultMode: 0440
           items:
           - key: valkey.conf
