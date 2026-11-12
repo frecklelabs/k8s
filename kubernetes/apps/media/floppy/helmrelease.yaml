@@ -5,6 +5,7 @@ kind: HelmRelease
 metadata:
   name: floppy
 spec:
+  suspend: false
   interval: 1h
   chartRef:
     kind: OCIRepository
@@ -111,6 +112,9 @@ spec:
                   httpGet: &health
                     path: /health/
                     port: 8000
+                    httpHeaders:
+                      - name: Host
+                        value: floppy.media.svc.cluster.local
                   periodSeconds: 10
                   failureThreshold: 180
                   timeoutSeconds: 10
