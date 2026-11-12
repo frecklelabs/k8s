@@ -88,6 +88,37 @@ spec:
                 memory: 256Mi
               limits:
                 memory: 1Gi
+          redis:
+            # Native sidecars stop after the app has finished returning worker messages.
+            restartPolicy: Always
+            image:
+              repository: docker.io/valkey/valkey
+              tag: 9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+            args: [--bind, "127.0.0.1", --appendonly, "yes", --appendfsync, everysec, --save, "", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            probes:
+              readiness: &redisProbes
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: [valkey-cli, ping]
+                  periodSeconds: 10
+                  timeoutSeconds: 3
+              liveness: *redisProbes
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 384Mi
         containers:
           app:
             image: *image
@@ -139,35 +170,6 @@ spec:
                 memory: 512Mi
               limits:
                 memory: 3Gi
-          redis:
-            image:
-              repository: docker.io/valkey/valkey
-              tag: 9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
-            args: [--bind, "127.0.0.1", --appendonly, "yes", --appendfsync, everysec, --save, "", --maxmemory, 256mb, --maxmemory-policy, noeviction]
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 1000
-              runAsGroup: 1000
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop: [ALL]
-            probes:
-              readiness: &redisProbes
-                enabled: true
-                custom: true
-                spec:
-                  exec:
-                    command: [valkey-cli, ping]
-                  periodSeconds: 10
-                  timeoutSeconds: 3
-              liveness: *redisProbes
-            resources:
-              requests:
-                cpu: 20m
-                memory: 64Mi
-              limits:
-                memory: 384Mi
     service:
       app:
         controller: floppy
