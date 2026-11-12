@@ -1,0 +1,44 @@
+---
+# Protect the complete listener, including the anonymous startup recovery UI.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: floppy-oidc
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    template:
+      engineVersion: v2
+      data:
+        client-id: '{{ index . "client-id" }}'
+        client-secret: '{{ index . "client-secret" }}'
+  dataFrom:
+    - extract:
+        key: ${CLUSTER_NAME}-media-floppy-oidc
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: floppy-oidc
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: floppy
+  oidc:
+    provider:
+      issuer: https://freckle.id
+    clientIDRef:
+      group: ""
+      kind: Secret
+      name: floppy-oidc
+    clientSecret:
+      group: ""
+      kind: Secret
+      name: floppy-oidc
+    redirectURL: https://floppy.${CLUSTER_SUBDOMAIN}.freckle.media/oauth2/callback
+    logoutPath: /oauth2/logout
+    scopes: [openid, email, profile]

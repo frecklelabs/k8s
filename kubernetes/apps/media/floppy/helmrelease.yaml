@@ -1,0 +1,208 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: floppy
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+    namespace: default
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  driftDetection:
+    mode: enabled
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 150
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      floppy:
+        # One embedded beat scheduler and one broker must own this state.
+        type: deployment
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        initContainers:
+          accounts:
+            image: &image
+              repository: ghcr.io/dannyvfilms/floppy
+              tag: 26.10.29@sha256:5e88307d4af68ee397f0233670b4f35f50d6ce5d12c34fde6b9ecab74ac4836e
+            command: [/bin/sh, -ec]
+            args:
+              - |
+                python manage.py migrate --noinput
+                python manage.py shell < /bootstrap/bootstrap.py
+            env: &env
+              TZ: America/Chicago
+              DB_HOST: ${FLOPPY_DB_HOST}
+              DB_PORT: "5432"
+              DB_NAME: floppy
+              DB_POOL_ENABLED: "false"
+              REDIS_URL: redis://localhost:6379/0
+              REGISTRATION: "false"
+              SOCIALACCOUNT_ONLY: "true"
+              REDIRECT_LOGIN_TO_SSO: "true"
+              SOCIAL_PROVIDERS: allauth.socialaccount.providers.openid_connect
+              DEMO_ACCOUNT_ENABLED: "false"
+              ADMIN_ENABLED: "true"
+              ALLOWED_HOSTS: floppy.${CLUSTER_SUBDOMAIN}.freckle.media,floppy,floppy.media,floppy.media.svc.cluster.local
+              URLS: https://floppy.${CLUSTER_SUBDOMAIN}.freckle.media
+              SESSION_COOKIE_SECURE: "true"
+              CSRF_COOKIE_SECURE: "true"
+              USE_X_FORWARDED_PROTO: "true"
+              USE_X_FORWARDED_HOST: "false"
+              USE_X_FORWARDED_PORT: "false"
+              FLOPPY_REDIS_MAXMEMORY: "0"
+              PUID: "1000"
+              PGID: "1000"
+              FLOPPY_DATA_DIR: /floppy/db
+              BACKUP_DIR: /floppy/backups
+            envFrom: &secrets
+              - secretRef:
+                  name: floppy-secrets
+            securityContext:
+              # Match the app's log owner on both first boot and PVC reuse.
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+        containers:
+          app:
+            image: *image
+            env: *env
+            envFrom: *secrets
+            ports:
+              - name: http
+                containerPort: 8000
+            # The stock entrypoint adjusts ownership and supervisord drops to abc.
+            securityContext:
+              runAsUser: 0
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+                # Root supervisord must signal workers running as abc.
+                add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID, KILL]
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: &health
+                    path: /health/
+                    port: 8000
+                  periodSeconds: 10
+                  failureThreshold: 180
+                  timeoutSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet: *health
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                memory: 3Gi
+          redis:
+            image:
+              repository: docker.io/valkey/valkey
+              tag: 9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+            args: [--bind, "127.0.0.1", --appendonly, "yes", --appendfsync, everysec, --save, "", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            probes:
+              readiness: &redisProbes
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: [valkey-cli, ping]
+                  periodSeconds: 10
+                  timeoutSeconds: 3
+              liveness: *redisProbes
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 384Mi
+    service:
+      app:
+        controller: floppy
+        ports:
+          http:
+            port: 8000
+    route:
+      app:
+        hostnames: ["floppy.${CLUSTER_SUBDOMAIN}.freckle.media"]
+        parentRefs:
+          - name: tailnet
+            namespace: gateway-system
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: 8000
+    persistence:
+      state:
+        existingClaim: ${APP}${VOLSYNC_PVC_SUFFIX:=}
+        advancedMounts:
+          floppy:
+            accounts: &stateMounts
+              - path: /floppy/db
+                subPath: data
+              - path: /floppy/backups
+                subPath: backups
+            app: *stateMounts
+            redis:
+              - path: /data
+                subPath: redis
+      bootstrap:
+        type: configMap
+        name: floppy-bootstrap
+        advancedMounts:
+          floppy:
+            accounts:
+              - path: /bootstrap
+                readOnly: true
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
