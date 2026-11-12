@@ -10,3 +10,4 @@ resources:
   - pdb.yaml
   - vmservicescrape.yaml
   - networkpolicy.yaml
+  - httproute.yaml
