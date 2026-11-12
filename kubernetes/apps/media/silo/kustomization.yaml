@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: media
+resources:
+  - externalsecret.yaml
+  - pvc.yaml
+  - resourceclaims.yaml
+  - deployments.yaml
+  - valkey.yaml
+  - service.yaml
+  - pdb.yaml
+  - vmservicescrape.yaml
+  - networkpolicy.yaml
