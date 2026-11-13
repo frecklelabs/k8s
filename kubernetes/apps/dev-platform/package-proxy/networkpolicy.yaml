@@ -27,6 +27,9 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: actions-runner-system
             dev-platform.freckle.tools/package-proxy-client: 'true'
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: freckle-actions
+            dev-platform.freckle.tools/package-proxy-client: 'true'
         # Self-hosted Renovate's lookups and lockfile updates (fairy).
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: renovate
@@ -70,7 +73,7 @@ spec:
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: db
-            cnpg.io/cluster: pg-18a
+            cnpg.io/cluster: ${PACKAGE_PROXY_DB_CLUSTER:=pg-18a}
       toPorts:
         - ports:
             - port: '5432'
