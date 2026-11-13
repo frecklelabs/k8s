@@ -1,14 +1,16 @@
 ---
-# CephFS has no snapshot class here. Only copy with every Silo writer stopped.
+# Live writers make this a seed; authoritative recovery requires stopped writers.
 apiVersion: volsync.backube/v1alpha1
 kind: ReplicationSource
 metadata:
   name: silo-state
+  annotations:
+    freckle.tools/recovery-class: non-authoritative-live-seed
 spec:
-  paused: true
+  paused: false
   sourcePVC: silo-state
   trigger:
-    manual: pre-cutover-1
+    manual: c2030-live-seed-1
   rsyncTLS:
     address: volsync-rsync-tls-dst-silo-state
     keySecret: volsync-rsync-tls-silo-state
