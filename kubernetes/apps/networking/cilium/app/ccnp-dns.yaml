@@ -9,7 +9,6 @@ spec:
         operator: "NotIn"
         values:
           - "kube-system"
-          - "agent-replay"
           - "agent-reviewer-system"
       - key: "k8s-app"
         operator: "NotIn"
