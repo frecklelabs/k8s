@@ -13,3 +13,4 @@ resources:
   - httproute.yaml
   - backup.yaml
   - db-export
+  - db-verify-export2
