@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://www.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - silo-api.yaml
+  - silo-transcode.yaml
+  - pdb.yaml
+  - broker-dragonfly.yaml
+  - broker-externalsecret.yaml
+  - broker-serviceaccount.yaml
+  - httproute.yaml
+  - ingress-api.yaml
+  - ingress-transcode.yaml
+  - scrape-api.yaml
+  - scrape-transcode.yaml
+  - silo-broker-app-ingress.yaml

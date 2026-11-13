@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/dragonflydb.io/dragonfly_v1alpha1.json
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: silo-dragonfly
+spec:
+  image: docker.dragonflydb.io/dragonflydb/dragonfly:v2.0.2@sha256:061f00b201b58e12f974e4e96c761a881ee1c05e9d8ee967466a604b7299753b
+  replicas: 3
+  authentication:
+    passwordFromSecret:
+      name: silo-split-secrets
+      key: BROKER_PASSWORD
+  args:
+    - --proactor_threads=1
+    - --maxmemory=512mb
+    - --version_check=false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  podMetadata:
+    labels:
+      silo.freckle.systems/role: broker
+  serviceAccountName: silo-dragonfly
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  skipFSGroup: true
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              silo.freckle.systems/role: broker
+          topologyKey: kubernetes.io/hostname
+  enableReplicationReadinessGate: true
+  pdb:
+    minAvailable: 2
