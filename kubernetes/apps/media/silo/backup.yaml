@@ -5,7 +5,7 @@ kind: ReplicationSource
 metadata:
   name: silo-state
 spec:
-  paused: false
+  paused: true
   sourcePVC: silo-state
   trigger:
     manual: pre-cutover-1

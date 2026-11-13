@@ -41,7 +41,7 @@ spec:
       patch: |-
         - op: replace
           path: /spec/replicas
-          value: 0
+          value: 1
     # A single migration writer must pass acceptance before the second slot.
     - target:
         kind: Deployment
