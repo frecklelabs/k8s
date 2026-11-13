@@ -14,4 +14,3 @@ resources:
   - backup.yaml
   - db-export
   - db-verify-export2
-  - db-rehearse-export2
