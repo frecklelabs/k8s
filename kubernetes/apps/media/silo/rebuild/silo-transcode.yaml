@@ -5,7 +5,7 @@ kind: HelmRelease
 metadata:
   name: silo-transcode
 spec:
-  suspend: true
+  suspend: false
   interval: 1h
   timeout: 130m
   chartRef:

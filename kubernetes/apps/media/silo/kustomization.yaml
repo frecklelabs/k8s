@@ -4,13 +4,7 @@ resources:
   - externalsecret.yaml
   - pvc.yaml
   - resourceclaims.yaml
-  - deployments.yaml
-  - valkey.yaml
-  - service.yaml
-  - pdb.yaml
-  - vmservicescrape.yaml
-  - networkpolicy.yaml
-  - httproute.yaml
   - backup.yaml
+  - rebuild
   - db-export
   - db-verify-export2
