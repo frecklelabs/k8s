@@ -24,7 +24,8 @@ spec:
   timeout: 130m
   prune: true
   deletionPolicy: Orphan
-  wait: true
+  # Cutover window: a held silo-a must not block later revisions in a health wait.
+  wait: false
   postBuild:
     substitute:
       SILO_DATABASE_CLUSTER: pg-18a
