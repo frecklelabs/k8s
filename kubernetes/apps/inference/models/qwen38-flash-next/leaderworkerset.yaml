@@ -51,6 +51,13 @@ metadata:
   name: qwen38-flash-next
 spec:
   replicas: 2
+  # Keep group 0 serving while group 1 measures persistent kernel reuse.
+  rolloutStrategy:
+    type: RollingUpdate
+    rollingUpdateConfiguration:
+      partition: 1
+      maxSurge: 0
+      maxUnavailable: 1
   leaderWorkerTemplate:
     size: 2
     restartPolicy: RecreateGroupOnPodRestart
@@ -159,6 +166,22 @@ spec:
               - -c
               - |
                 python3 -c 'import importlib.metadata as m; print("inference-versions vllm=%s instanttensor=%s" % (m.version("vllm"), m.version("instanttensor")))' || true
+                python3 - <<'PY_CACHE' || exit 1
+                import importlib.metadata as m
+                import os
+                from pathlib import Path
+                for package in ("vllm", "flashinfer-python", "triton", "nvidia-cutlass-dsl"):
+                    print("inference-cache-package", package, m.version(package), flush=True)
+                revision = Path("/models/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4/refs/main").read_text().strip()
+                if revision != "fc694b54fb0174e0913e6adf86691ef85a4ead47":
+                    raise RuntimeError("model revision changed: rotate the kernel cache key")
+                print("inference-cache-model-revision", revision, flush=True)
+                for variable in ("VLLM_CACHE_ROOT", "TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "CUDA_CACHE_PATH"):
+                    path = Path(os.environ[variable])
+                    path.mkdir(parents=True, exist_ok=True)
+                    count = sum(len(files) for _, _, files in os.walk(path))
+                    print("inference-cache-path", variable, str(path), "files", count, flush=True)
+                PY_CACHE
                 vllm serve nvidia/Qwen3.8-Flash-Next-NVFP4 \
                   --served-model-name nvidia/Qwen3.8-Flash-Next-NVFP4 qwen3.8-flash-next \
                   --trust-remote-code \
@@ -187,6 +210,15 @@ spec:
                   --host 0.0.0.0 \
                   --port 8000
             env:
+              # Route compiler caches into the revision-scoped persistent mount.
+              - name: VLLM_CACHE_ROOT
+                value: /root/.cache/vllm
+              - name: TRITON_CACHE_DIR
+                value: /root/.cache/triton
+              - name: CUTE_DSL_CACHE_DIR
+                value: /root/.cache/cutedsl
+              - name: CUDA_CACHE_PATH
+                value: /root/.cache/nvidia/ComputeCache
               - name: HF_HOME
                 value: /models
               # Weights pre-staged on CephFS (/models/hub); never reach HF at
@@ -261,11 +293,18 @@ spec:
               limits:
                 memory: 112Gi
             volumeMounts:
+              - name: kernel-cache
+                mountPath: /root/.cache
               - name: local-models
                 mountPath: /models
               - name: shm
                 mountPath: /dev/shm
         volumes:
+          # Rotate the key when the image, model revision, architecture or flags change.
+          - name: kernel-cache
+            hostPath:
+              path: /var/local/inference-cache/cache-v1-12be8a4036296480e75adaf6
+              type: DirectoryOrCreate
           # Source: shared models PVC on CephFS (read-only; init copies out of it).
           - name: ceph-models
             persistentVolumeClaim:
@@ -386,6 +425,22 @@ spec:
               - -c
               - |
                 python3 -c 'import importlib.metadata as m; print("inference-versions vllm=%s instanttensor=%s" % (m.version("vllm"), m.version("instanttensor")))' || true
+                python3 - <<'PY_CACHE' || exit 1
+                import importlib.metadata as m
+                import os
+                from pathlib import Path
+                for package in ("vllm", "flashinfer-python", "triton", "nvidia-cutlass-dsl"):
+                    print("inference-cache-package", package, m.version(package), flush=True)
+                revision = Path("/models/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4/refs/main").read_text().strip()
+                if revision != "fc694b54fb0174e0913e6adf86691ef85a4ead47":
+                    raise RuntimeError("model revision changed: rotate the kernel cache key")
+                print("inference-cache-model-revision", revision, flush=True)
+                for variable in ("VLLM_CACHE_ROOT", "TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "CUDA_CACHE_PATH"):
+                    path = Path(os.environ[variable])
+                    path.mkdir(parents=True, exist_ok=True)
+                    count = sum(len(files) for _, _, files in os.walk(path))
+                    print("inference-cache-path", variable, str(path), "files", count, flush=True)
+                PY_CACHE
                 vllm serve nvidia/Qwen3.8-Flash-Next-NVFP4 \
                   --served-model-name nvidia/Qwen3.8-Flash-Next-NVFP4 qwen3.8-flash-next \
                   --trust-remote-code \
@@ -415,6 +470,15 @@ spec:
                   --host 0.0.0.0 \
                   --port 8000
             env:
+              # Route compiler caches into the revision-scoped persistent mount.
+              - name: VLLM_CACHE_ROOT
+                value: /root/.cache/vllm
+              - name: TRITON_CACHE_DIR
+                value: /root/.cache/triton
+              - name: CUTE_DSL_CACHE_DIR
+                value: /root/.cache/cutedsl
+              - name: CUDA_CACHE_PATH
+                value: /root/.cache/nvidia/ComputeCache
               - name: HF_HOME
                 value: /models
               - name: HF_HUB_OFFLINE
@@ -455,11 +519,18 @@ spec:
               limits:
                 memory: 112Gi
             volumeMounts:
+              - name: kernel-cache
+                mountPath: /root/.cache
               - name: local-models
                 mountPath: /models
               - name: shm
                 mountPath: /dev/shm
         volumes:
+          # Rotate the key when the image, model revision, architecture or flags change.
+          - name: kernel-cache
+            hostPath:
+              path: /var/local/inference-cache/cache-v1-12be8a4036296480e75adaf6
+              type: DirectoryOrCreate
           # Source: shared models PVC on CephFS (read-only; init copies out of it).
           - name: ceph-models
             persistentVolumeClaim:
