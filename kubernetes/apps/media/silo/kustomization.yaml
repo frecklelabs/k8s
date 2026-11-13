@@ -12,3 +12,4 @@ resources:
   - networkpolicy.yaml
   - httproute.yaml
   - backup.yaml
+  - db-export
