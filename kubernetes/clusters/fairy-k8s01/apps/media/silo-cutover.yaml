@@ -1,0 +1,50 @@
+---
+# Authoritative pair for the split cutover: export first, then the state pass.
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: silo-cutover-db
+  namespace: media
+spec:
+  targetNamespace: media
+  dependsOn:
+    - name: external-secrets
+      namespace: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/apps/media/silo/cutover/db
+  interval: 10m
+  retryInterval: 1m
+  timeout: 25m
+  prune: true
+  deletionPolicy: Orphan
+  # Ready only once the export Job has completed its own verification.
+  wait: true
+  postBuild:
+    substitute:
+      SILO_DATABASE_CLUSTER: pg-18a
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: silo-cutover-state
+  namespace: media
+spec:
+  targetNamespace: media
+  dependsOn:
+    - name: silo-cutover-db
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/apps/media/silo/cutover/state
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  deletionPolicy: Orphan
+  wait: false
