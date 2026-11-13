@@ -11,3 +11,4 @@ resources:
   - vmservicescrape.yaml
   - networkpolicy.yaml
   - httproute.yaml
+  - backup.yaml

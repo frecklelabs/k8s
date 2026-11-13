@@ -1,0 +1,74 @@
+---
+# CephFS has no snapshot class here. Only copy with every Silo writer stopped.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: silo-state
+spec:
+  paused: true
+  sourcePVC: silo-state
+  trigger:
+    manual: pre-cutover-1
+  rsyncTLS:
+    address: volsync-rsync-tls-dst-silo-state
+    keySecret: volsync-rsync-tls-silo-state
+    copyMethod: Direct
+    moverSecurityContext:
+      runAsUser: 3000
+      runAsGroup: 3000
+      fsGroup: 3000
+      fsGroupChangePolicy: OnRootMismatch
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: silo-state
+spec:
+  rsyncTLS:
+    destinationPVC: silo-state-backup
+    copyMethod: Direct
+    serviceType: ClusterIP
+    moverSecurityContext:
+      runAsUser: 3000
+      runAsGroup: 3000
+      fsGroup: 3000
+      fsGroupChangePolicy: OnRootMismatch
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: silo-state-backup
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: truenas-nfs-backup
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: silo-state-backup
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dst-silo-state
+      app.kubernetes.io/created-by: volsync
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: src-silo-state
+              app.kubernetes.io/created-by: volsync
+      ports:
+        - port: 8000
+          protocol: TCP
