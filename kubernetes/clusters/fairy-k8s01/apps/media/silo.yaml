@@ -34,6 +34,13 @@ spec:
       - kind: ConfigMap
         name: k8s-cluster-info
   patches:
+    - target:
+        kind: Deployment
+        name: silo-a
+      patch: |-
+        - op: replace
+          path: /spec/replicas
+          value: 0
     # A single migration writer must pass acceptance before the second slot.
     - target:
         kind: Deployment
