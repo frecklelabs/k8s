@@ -1,0 +1,78 @@
+---
+# A random, non-credential canary. Denial probes look for its value where it
+# must not appear (agent tools, other namespaces) before the real App key is
+# uploaded. Remove after go-live.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: reviewer-probe
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: reviewer-probe
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: fairy-k8s01-agent-reviewer-system-probe
+---
+# Proves the namespace default-deny blocks egress: cluster DNS, the API server
+# and an external address must all be unreachable. Exits non-zero if any is.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: egress-canary
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: probe
+          image: mirror.gcr.io/curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+          command: ["/bin/sh", "-c"]
+          # DNS: any answer means open. curl exit 7 (refused) and 28
+          # (timeout) mean blocked; anything else means a connection was made.
+          args:
+            - |
+              open=0
+              probe() {
+                curl -sk -o /dev/null --connect-timeout 5 --max-time 10 "$2"
+                rc=$?
+                case "$rc" in
+                  7|28) echo "BLOCKED $1 (curl $rc)" ;;
+                  *) echo "OPEN $1 (curl $rc)"; open=1 ;;
+                esac
+              }
+              for tool in nslookup timeout; do
+                command -v "$tool" >/dev/null || { echo "MISSING $tool"; exit 2; }
+              done
+              if timeout 10 nslookup kubernetes.default.svc.cluster.local >/dev/null 2>&1; then
+                echo "OPEN dns"; open=1
+              else
+                echo "BLOCKED dns"
+              fi
+              probe apiserver "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+              probe external https://1.1.1.1
+              exit "$open"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
