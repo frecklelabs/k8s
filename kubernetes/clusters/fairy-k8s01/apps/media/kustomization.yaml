@@ -36,3 +36,4 @@ resources:
   - ./readalong.yaml
   - ./floppy.yaml
   - ./silo.yaml
+  - ./silo-cutover.yaml

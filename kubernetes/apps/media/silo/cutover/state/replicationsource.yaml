@@ -1,0 +1,47 @@
+---
+# Flux applies this only after silo-db-export-3 completes, so writers are already gone.
+# Incremental mirror onto the seeded destination; this pass is the authoritative state.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: silo-state-cutover
+  annotations:
+    freckle.tools/recovery-class: authoritative-stopped-writer
+    freckle.tools/recovery-point: c1942-cutover-3
+spec:
+  sourcePVC: silo-state
+  trigger:
+    manual: c1942-cutover-3
+  rsyncTLS:
+    address: volsync-rsync-tls-dst-silo-state
+    keySecret: volsync-rsync-tls-silo-state
+    copyMethod: Direct
+    moverSecurityContext:
+      runAsUser: 3000
+      runAsGroup: 3000
+      fsGroup: 3000
+      fsGroupChangePolicy: OnRootMismatch
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.26.1-standalone-strict/networkpolicy-networking-v1.json
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: silo-state-cutover
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dst-silo-state
+      app.kubernetes.io/created-by: volsync
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: src-silo-state-cutover
+              app.kubernetes.io/created-by: volsync
+      ports:
+        - port: 8000
+          protocol: TCP
