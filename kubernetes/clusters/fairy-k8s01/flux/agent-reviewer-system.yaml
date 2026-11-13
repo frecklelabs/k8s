@@ -1,0 +1,28 @@
+---
+# Reserve the publisher namespace without importing shared credentials or DNS
+# access. Workloads and their isolation proofs are delivered separately.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-reviewer-system
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# The shared DNS policy does not enable default-deny. Keep this baseline with
+# the reserved namespace so future workloads need explicit traffic allowances.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: agent-reviewer-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
