@@ -16,9 +16,10 @@ finish() {
 trap finish EXIT
 trap 'exit 1' HUP INT TERM
 export_archive() {
-  [ "${APPROVED_RECOVERY_POINT:-}" = c1942-pre-cutover-1 ]
+  # Keep runtime guards intact through Flux postBuild substitution.
+  [ "$APPROVED_RECOVERY_POINT" = c1942-pre-cutover-2 ]
   [ "$(id -u)" -eq 26 ]
-  [ -n "${DATABASE_URL:-}" ]
+  [ -n "$DATABASE_URL" ]
   unset PGDATABASE PGHOST PGHOSTADDR PGPORT PGUSER PGPASSWORD PGPASSFILE PGSERVICE PGSERVICEFILE PGOPTIONS PGCLIENTENCODING
   export PGPASSFILE=/dev/null PGSERVICEFILE=/dev/null HOME=/scratch/private
   export PGAPPNAME=c1942-silo-db-export PGCONNECT_TIMEOUT=15
@@ -28,9 +29,9 @@ export_archive() {
     if [ -e "$path" ] || [ -L "$path" ]; then return 1; fi
   done
   # Atomic one-attempt claim; never remove this marker or retry this recovery point.
-  mkdir -m 0700 /archive/.c1942-export-1
+  mkdir -m 0700 /archive/.c1942-export-2
   # Retain diagnostics even after this one-attempt pod exits.
-  exec > /archive/.c1942-export-1/diagnostic.log 2>&1
+  exec > /archive/.c1942-export-2/diagnostic.log 2>&1
   set -C
   identity=$(psql --dbname="$DATABASE_URL" -X --no-password -At -v ON_ERROR_STOP=1 -c \
     "SELECT current_database() = 'silo' AND current_setting('server_version_num')::int / 10000 = 18 AND pg_encoding_to_char(encoding) = 'UTF8' FROM pg_database WHERE datname = current_database();")
@@ -42,11 +43,12 @@ export_archive() {
   # No filters, row-security override or parallel connections.
   pg_dump --dbname="$DATABASE_URL" --no-password --format=custom --lock-wait-timeout=30s > /archive/silo.dump
   [ -s /archive/silo.dump ]
-  pg_restore --list /archive/silo.dump > /archive/.c1942-export-1/toc.txt
+  pg_restore --list /archive/silo.dump > /archive/.c1942-export-2/toc.txt
   (cd /archive && sha256sum silo.dump) > /archive/silo.dump.sha256
   # Flush errors must precede the completion marker; actual NAS durability is a gate.
   sync
   printf '%s\n' 'export complete; not restore acceptance' > /archive/export-complete.txt
   sync
 }
+mkdir -m 0700 /scratch/private
 export_archive > /scratch/private/diagnostic.log 2>&1
