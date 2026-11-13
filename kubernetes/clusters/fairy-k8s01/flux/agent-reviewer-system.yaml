@@ -26,3 +26,30 @@ spec:
   policyTypes:
     - Ingress
     - Egress
+---
+# Dummy-value proofs for the namespace boundary (C-1959): a canary secret and
+# an egress canary. No reviewer key, workload or RBAC is delivered here.
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app agent-reviewer-system-apps
+  namespace: &namespace agent-reviewer-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/clusters/fairy-k8s01/apps/agent-reviewer-system
+  interval: 2m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: false
