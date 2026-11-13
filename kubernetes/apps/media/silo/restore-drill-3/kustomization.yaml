@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://www.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - drill.yaml
+configMapGenerator:
+  - name: silo-restore-drill-3-scripts
+    files:
+      - restore-db.sh
+      - copy-state.sh
+      - drill.sh
+      - keycheck.js
