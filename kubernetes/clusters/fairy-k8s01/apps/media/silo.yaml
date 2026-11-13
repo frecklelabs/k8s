@@ -27,6 +27,7 @@ spec:
   wait: true
   postBuild:
     substitute:
+      SILO_DATABASE_CLUSTER: pg-18a
       SILO_DATABASE_HOST: pg-18a-rw.db.svc.cluster.local
       SILO_MEDIA_CLAIM: store01-vault01-media
       SILO_MEDIA_MOUNT: /store01/vault01
