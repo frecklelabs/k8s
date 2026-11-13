@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - ./openrouter.yaml
   - ./route.yaml
+  - ./underwraps-eval.yaml

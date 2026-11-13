@@ -25,13 +25,24 @@ spec:
           from: Same
     # Paid cloud models (OpenRouter, C-1170). Every route on this Gateway must
     # name its listener with sectionName: a parentRef without one attaches to
-    # both listeners. The ai-gateway-ingress
+    # every listener. The ai-gateway-ingress
     # CiliumNetworkPolicy admits only the open-webui namespace to it, so
     # cockpit runs and the MCP servers can never reach a pay-per-token model.
     # Ports >= 1024 are not remapped by Envoy Gateway: container port 8080.
     - name: cloud
       protocol: HTTP
       port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+    # Under Wraps DeepSeek evaluation (C-2072): one model alias on the
+    # existing openrouter-zdr backend, route underwraps-eval in ai-routes. The
+    # ai-gateway-ingress CiliumNetworkPolicy admits only agent-runs pods that
+    # carry the conductor-set cockpit.freckle.dev/eval=underwraps-deepseek
+    # label. Container port 8081 (not remapped, >= 1024).
+    - name: eval
+      protocol: HTTP
+      port: 8081
       allowedRoutes:
         namespaces:
           from: Same
@@ -82,6 +93,12 @@ spec:
     - name: cloud
       port: 8080
       targetPort: 8080
+      protocol: TCP
+    # The Under Wraps eval listener. Labelled eval run pods only, enforced at
+    # the pod by the ai-gateway-ingress CiliumNetworkPolicy.
+    - name: eval
+      port: 8081
+      targetPort: 8081
       protocol: TCP
 ---
 # Dedicated data plane for the AI gateway. Mirrors the class-level
