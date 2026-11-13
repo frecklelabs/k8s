@@ -6,8 +6,12 @@
 # before. The cloud listener (8080, paid OpenRouter models) is admitted only
 # from the open-webui namespace: agent-runs, ai-mcp (inference-mcp) and
 # agent-platform (the cockpit router) get no allow, so their packets to 8080
-# are dropped. No egress section: egress stays unenforced (the pods dial
-# OpenRouter, the vLLM backends and the EG controller's xDS).
+# are dropped. The eval listener (8081, C-2072) is admitted only from
+# agent-runs pods labelled cockpit.freckle.dev/eval=underwraps-deepseek; the
+# conductor sets that label on the eval run's Job, and run pods have no
+# Kubernetes API access to relabel themselves. No egress section: egress
+# stays unenforced (the pods dial OpenRouter, the vLLM backends and the EG
+# controller's xDS).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -40,4 +44,17 @@ spec:
       toPorts:
         - ports:
             - port: "8080"
+              protocol: TCP
+    # Eval listener: the Under Wraps DeepSeek eval run's pods only (C-2072).
+    # Ordinary runs, open-webui and everything else get no allow on 8081.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: agent-runs
+            cockpit.freckle.dev/eval: underwraps-deepseek
+          matchExpressions:
+            - key: cockpit.freckle.dev/run-id
+              operator: Exists
+      toPorts:
+        - ports:
+            - port: "8081"
               protocol: TCP

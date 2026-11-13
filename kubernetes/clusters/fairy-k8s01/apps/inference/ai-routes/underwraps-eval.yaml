@@ -1,0 +1,38 @@
+---
+# Under Wraps DeepSeek evaluation (C-2072). One model alias on the Gateway's
+# `eval` listener (port 8081), sent to the existing openrouter-zdr backend in
+# openrouter.yaml with its key, BackendSecurityPolicy and workspace unchanged.
+# The zdr workspace guardrail is what gives zero data retention and no
+# training; there is no provider pin here.
+#
+# Clients speak Anthropic Messages (POST /v1/messages, streaming and tools);
+# the backend schema is OpenAI, so the gateway translates Messages to Chat
+# Completions. POST /v1/messages/count_tokens has no OpenAI translation and is
+# unsupported on this route: clients must tolerate it failing.
+#
+# Only underwraps-deepseek has a rule, so any other model name on this
+# listener gets no route. The ai-gateway-ingress CiliumNetworkPolicy admits
+# port 8081 only from agent-runs pods labelled
+# cockpit.freckle.dev/eval=underwraps-deepseek. Nothing else attaches to
+# `eval`, and this route attaches to nothing else.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: underwraps-eval
+spec:
+  parentRefs:
+    - name: ai
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: eval
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: underwraps-deepseek
+      backendRefs:
+        - name: openrouter-zdr
+          modelNameOverride: deepseek/deepseek-v4.1-flash-1017
+      timeouts:
+        request: 1800s
