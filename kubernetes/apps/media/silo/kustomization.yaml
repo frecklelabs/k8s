@@ -8,3 +8,4 @@ resources:
   - rebuild
   - db-export
   - db-verify-export2
+  - restore-drill-3
