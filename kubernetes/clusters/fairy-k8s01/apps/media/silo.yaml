@@ -24,8 +24,7 @@ spec:
   timeout: 130m
   prune: true
   deletionPolicy: Orphan
-  # Cutover window: a held silo-a must not block later revisions in a health wait.
-  wait: false
+  wait: true
   postBuild:
     substitute:
       SILO_DATABASE_CLUSTER: pg-18a
@@ -43,34 +42,6 @@ spec:
         - op: replace
           path: /spec/replicas
           value: 1
-    # Cutover window: hold the integrated writer stopped, then restart it automatically.
-    # Recreate ends the old process before the hold starts; the split activation
-    # removes this Deployment, so the hold only expires when the window overruns.
-    - target:
-        kind: Deployment
-        name: silo-a
-      patch: |-
-        - op: replace
-          path: /spec/strategy
-          value:
-            type: Recreate
-        - op: add
-          path: /spec/template/spec/initContainers/0
-          value:
-            name: cutover-hold
-            image: ghcr.io/silo-server/silo-server:build-2213@sha256:2a242495855cf002fda78ddbd308d34013595b333a6469cf07ab971f3b8ae309
-            command: [/bin/sh, -ec, 'echo cutover-hold: Silo stays stopped for 3600s; sleep 3600']
-            securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities:
-                drop: [ALL]
-            resources:
-              requests:
-                cpu: 1m
-                memory: 8Mi
-              limits:
-                memory: 32Mi
     # A single migration writer must pass acceptance before the second slot.
     - target:
         kind: Deployment
