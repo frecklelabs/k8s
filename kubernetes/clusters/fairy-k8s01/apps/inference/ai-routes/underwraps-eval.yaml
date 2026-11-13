@@ -5,9 +5,12 @@
 # The zdr workspace guardrail is what gives zero data retention and no
 # training; there is no provider pin here.
 #
-# Clients speak Anthropic Messages (POST /v1/messages, streaming and tools);
-# the backend schema is OpenAI, so the gateway translates Messages to Chat
-# Completions. POST /v1/messages/count_tokens has no OpenAI translation and is
+# Clients speak Anthropic Messages (POST /anthropic/v1/messages, streaming and
+# tools): the extproc serves the Anthropic schema under the /anthropic endpoint
+# prefix, and a bare /v1/messages is a 404 before any route matches, so
+# clients use .../anthropic as their base URL. The backend schema is OpenAI,
+# so the gateway translates Messages to Chat Completions.
+# POST /anthropic/v1/messages/count_tokens has no OpenAI translation and is
 # unsupported on this route: clients must tolerate it failing.
 #
 # Only underwraps-deepseek has a rule, so any other model name on this
