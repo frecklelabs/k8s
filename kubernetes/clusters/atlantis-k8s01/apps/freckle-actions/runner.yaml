@@ -18,6 +18,17 @@ spec:
       namespace: flux-system
   interval: 1h
   path: ./kubernetes/apps/actions-runner-controller/runners/freckle-actions
+  patches:
+    # Preserve CPU failure headroom while effective request accounting is corrected.
+    - target:
+        group: helm.toolkit.fluxcd.io
+        version: v2
+        kind: HelmRelease
+        name: freckle-actions-runner
+      patch: |-
+        - op: replace
+          path: /spec/values/maxRunners
+          value: 2
   prune: true
   retryInterval: 2m
   sourceRef:
