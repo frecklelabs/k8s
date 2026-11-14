@@ -1,0 +1,45 @@
+---
+# The publisher's only egress (C-1959), on top of the namespace's default-deny:
+# DNS for exactly two names, the pg-18a instances on 5432, and api.github.com
+# on 443. No Kubernetes API, no other cluster service, no other host. Ingress
+# stays denied; kubelet probes come from the host and are not affected.
+# The egress-canary Job carries the same label and asserts this exact set.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: reviewer-publisher-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      freckle.systems/reviewer-egress: publisher
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+          rules:
+            # The pods set ndots 1, so these are queried as absolute names
+            # first; every other query is refused.
+            dns:
+              - matchName: api.github.com
+              - matchName: pg-18a-rw.db.svc.cluster.local
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: db
+            cnpg.io/cluster: pg-18a
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+    - toFQDNs:
+        - matchName: api.github.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

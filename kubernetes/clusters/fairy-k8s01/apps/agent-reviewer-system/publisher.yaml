@@ -1,0 +1,158 @@
+---
+# The reviewer publisher host (C-1959), SHADOW MODE ONLY: it reads PRs with the
+# reviewer App's read-only installation token and records what it would have
+# published; it has no write path (agent-platform docs/reviewer-publisher.md).
+# Its only work source is the cockpit's reviewer_shadow_requests queue, which
+# stays empty until Nicole enrols a repository (REVIEWER_SHADOW_REPOS).
+#
+# The App key and the database role exist only in this namespace. The image is
+# pinned by digest, so every publisher version is a reviewed change here.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: reviewer-app-key
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: reviewer-app-key
+    creationPolicy: Owner
+  # The raw .pem GitHub issued, copied unchanged (ghread.ParseKey refuses
+  # anything else).
+  data:
+    - secretKey: app.pem
+      remoteRef:
+        key: fairy-k8s01-agent-reviewer-system-app
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: reviewer-publisher-db
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: reviewer-publisher-db
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        # A direct connection to the primary: the host lock is a session
+        # advisory lock, which a transaction pooler would break.
+        REVIEWER_DATABASE_URL: "postgres://{{ .username }}:{{ .password }}@pg-18a-rw.db.svc.cluster.local:5432/cockpit?sslmode=require"
+  dataFrom:
+    - extract:
+        key: fairy-k8s01-agent-reviewer-system-db
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: reviewer-publisher
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviewer-publisher
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  # A singleton: the host takes a session advisory lock before it serves
+  # /healthz, so a second pod would never become Ready. RollingUpdate would
+  # keep the old pod until the new one is Ready and deadlock; Recreate stops
+  # the old one first.
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reviewer-publisher
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reviewer-publisher
+        # Selected by the reviewer-publisher-egress policy; the egress canary
+        # carries the same label to prove exactly what it allows.
+        freckle.systems/reviewer-egress: publisher
+    spec:
+      serviceAccountName: reviewer-publisher
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      # 25s bounded Service.Shutdown plus the coordinator's detached 30s drain,
+      # with margin.
+      terminationGracePeriodSeconds: 75
+      # Names with a dot resolve as absolute names first, so the pinned DNS
+      # allowlist in the egress policy sees exactly the two names below.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: publisher
+          image: ghcr.io/frecklelabs/agent-platform/cockpit:main-20261114T194954Z-5dd332d@sha256:eb55a8fbbf4c16f3e9f3b4d61415fd37d9693561b726467ce47fa2a80f81f175
+          args: ["reviewer-publisher"]
+          env:
+            - name: REVIEWER_PUBLISHER_MODE
+              value: shadow
+            - name: REVIEWER_APP_KEY_FILE
+              value: /var/run/reviewer/app.pem
+            - name: REVIEWER_LISTEN
+              value: ":8080"
+            - name: REVIEWER_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: reviewer-publisher-db
+                  key: REVIEWER_DATABASE_URL
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          volumeMounts:
+            - name: app-key
+              mountPath: /var/run/reviewer
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: app-key
+          secret:
+            secretName: reviewer-app-key
+            defaultMode: 0440
+            items:
+              - key: app.pem
+                path: app.pem

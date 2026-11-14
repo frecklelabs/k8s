@@ -32,6 +32,10 @@ spec:
     pg_hba:
       - host bookorbit bookorbit_read all scram-sha-256
       - host all bookorbit_read all reject
+      # The reviewer publisher's role reads and writes only its own tables
+      # in the cockpit database (C-1959); held to that database too.
+      - host cockpit reviewer_publisher all scram-sha-256
+      - host all reviewer_publisher all reject
   nodeMaintenanceWindow:
     inProgress: false
     reusePVC: true
@@ -115,6 +119,24 @@ spec:
         login: true
         passwordSecret:
           name: cockpit-db-role
+      # The reviewer publisher (C-1959): a non-owner role in the cockpit
+      # database. The cockpit grants it exactly the tables it needs on start;
+      # row-level security confines it to its own github_admission row, so
+      # it must stay neither superuser nor BYPASSRLS nor a member of cockpit
+      # (the publisher refuses to start otherwise). The name is fixed in
+      # agent-platform (publish.PublisherRole). Password: tofu, platform/reviewer.tf.
+      - name: reviewer_publisher
+        ensure: present
+        login: true
+        inherit: false
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 10
+        passwordSecret:
+          name: reviewer-publisher-db-role
       # lore's memory store. Its row-level security only holds for a role
       # that is neither a superuser nor BYPASSRLS (lore refuses to start
       # otherwise). The secret and the Database CR are in the private repo.

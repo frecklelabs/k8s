@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/external-secrets.io/externalsecret_v1.json
+# Password for the CNPG managed `reviewer_publisher` role on pg-18a (C-1959).
+# Same tofu-generated value the publisher reads in agent-reviewer-system.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: reviewer-publisher-db-role
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: gcp-sm
+  target:
+    name: reviewer-publisher-db-role
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      metadata:
+        labels:
+          cnpg.io/reload: "true"
+      data:
+        username: "{{ .username }}"
+        password: "{{ .password }}"
+  dataFrom:
+    - extract:
+        key: ${CLUSTER_NAME}-db-reviewer-publisher-role

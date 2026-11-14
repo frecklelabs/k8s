@@ -9,6 +9,9 @@ metadata:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/audit: restricted
+    # The publisher runs the private cockpit image; this fans in only the
+    # cluster's GHCR pull Secret, nothing else.
+    freckle.systems/ghcr-pull: "true"
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
@@ -27,8 +30,8 @@ spec:
     - Ingress
     - Egress
 ---
-# Dummy-value proofs for the namespace boundary (C-1959): a canary secret and
-# an egress canary. No reviewer key, workload or RBAC is delivered here.
+# The reviewer publisher (C-1959, shadow mode only), its App key and database
+# ExternalSecrets, its egress policy, and the boundary canaries. No RBAC.
 # yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
