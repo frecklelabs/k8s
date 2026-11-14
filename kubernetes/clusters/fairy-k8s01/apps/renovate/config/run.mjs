@@ -22,6 +22,12 @@ function appJwt() {
   return body + '.' + createSign('RSA-SHA256').update(body).sign(key, 'base64url');
 }
 
+// Thrown when GitHub says to back off. These two calls are the App's own
+// budget, separate from the broker's, and the run has nowhere durable to keep
+// a hold (no API access, /tmp is an emptyDir), so the run is skipped instead:
+// the next slot is 30 minutes away and costs at most two calls (C-2211).
+class RateLimited extends Error {}
+
 async function github(method, path) {
   const res = await fetch(API + path, {
     method,
@@ -31,8 +37,26 @@ async function github(method, path) {
       'X-GitHub-Api-Version': '2022-11-28',
     },
   });
-  if (!res.ok) throw new Error(method + ' ' + path + ': HTTP ' + res.status);
-  return res.json();
+  if (res.ok) return res.json();
+  const h = (name) => res.headers.get(name);
+  const retryAfter = Number(h('retry-after'));
+  const remaining = h('x-ratelimit-remaining');
+  const reset = Number(h('x-ratelimit-reset'));
+  // GitHub signals both primary and secondary limits with 403 or 429; a 403
+  // without these headers is a real permission error and still fails the run.
+  if ((res.status === 403 || res.status === 429) && (retryAfter > 0 || remaining === '0' || res.status === 429)) {
+    const until =
+      retryAfter > 0 ? Date.now() + retryAfter * 1000 : reset > 0 ? reset * 1000 : Date.now() + 60_000;
+    throw new RateLimited(
+      method + ' ' + path + ': HTTP ' + res.status +
+        ' retry_after=' + (h('retry-after') ?? '-') +
+        ' remaining=' + (remaining ?? '-') +
+        ' reset=' + (h('x-ratelimit-reset') ?? '-') +
+        ' resource=' + (h('x-ratelimit-resource') ?? '-') +
+        ' until=' + new Date(until).toISOString(),
+    );
+  }
+  throw new Error(method + ' ' + path + ': HTTP ' + res.status);
 }
 
 // Renovate hands child processes (go mod tidy, npm and uv locks) only a
@@ -41,8 +65,16 @@ async function github(method, path) {
 const PROXY_ENV = ['GOPROXY', 'GOSUMDB', 'GOPRIVATE', 'NPM_CONFIG_REGISTRY', 'PIP_INDEX_URL', 'UV_INDEX_URL'];
 const proxyEnv = Object.fromEntries(PROXY_ENV.filter((k) => env[k]).map((k) => [k, env[k]]));
 
-const inst = await github('GET', '/orgs/' + ORG + '/installation');
-const { token } = await github('POST', '/app/installations/' + inst.id + '/access_tokens');
+let inst, token;
+try {
+  inst = await github('GET', '/orgs/' + ORG + '/installation');
+  ({ token } = await github('POST', '/app/installations/' + inst.id + '/access_tokens'));
+} catch (err) {
+  if (!(err instanceof RateLimited)) throw err;
+  // Exit 0: a back-off is expected, not a failed Job (KubeJobFailed).
+  console.log('renovate: INFO GitHub rate limit, skipping this run: ' + err.message);
+  process.exit(0);
+}
 console.log('renovate: running for ' + ORG + ' (installation ' + inst.id + ')');
 const run = spawnSync('renovate', [], {
   stdio: 'inherit',
