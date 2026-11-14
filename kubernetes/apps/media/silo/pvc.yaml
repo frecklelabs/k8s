@@ -26,3 +26,19 @@ spec:
   resources:
     requests:
       storage: 2Gi
+---
+# Online export-4 archive. Defined here rather than in db-export-4 so it stays
+# when that component is removed.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: silo-db-backup-4
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: truenas-nfs-backup
+  resources:
+    requests:
+      storage: 20Gi

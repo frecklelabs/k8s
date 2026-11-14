@@ -8,3 +8,4 @@ resources:
   - rebuild
   - db-export
   - db-verify-export2
+  - db-export-4
