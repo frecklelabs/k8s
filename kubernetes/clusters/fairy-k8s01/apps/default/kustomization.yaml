@@ -11,7 +11,6 @@ components:
   - ../_shared/cluster-info
 resources:
   - ./app-template.yaml
-  - ./k8s-cluster-secrets.yaml
   - ./namespace.yaml
 patches:
   - target:

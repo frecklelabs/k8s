@@ -44,12 +44,26 @@ spec:
   timeout: 5m
   prune: true
   wait: false
-  # Janet is parked (C-2212, 2026-11-15): its repo is archived, so the bundle
-  # can't change, and it called ChatGPT Codex, OpenAI auth, GitHub and Google
-  # with no rate-limit handling. Each workload child KS this applies gets a
-  # patch that scales its Deployments to 0. The DB, its backups, the secrets
-  # and the namespaces stay as they are. To unpark, delete this block.
   patches:
+    # The bundle's child Kustomizations list the retired k8s-cluster-secrets
+    # Secret (C-2137) as a non-optional substituteFrom entry. frecklelabs/janet
+    # is archived, so the bundle can't change; drop the entry here instead. The
+    # test op makes a reshuffled bundle fail the build rather than remove the
+    # wrong entry.
+    - target:
+        kind: Kustomization
+        name: janet-(api|controller|migrate|scheduler|ui)
+      patch: |-
+        - op: test
+          path: /spec/postBuild/substituteFrom/1/name
+          value: k8s-cluster-secrets
+        - op: remove
+          path: /spec/postBuild/substituteFrom/1
+    # Janet is parked (C-2212, 2026-11-15): its repo is archived, so the bundle
+    # can't change, and it called ChatGPT Codex, OpenAI auth, GitHub and Google
+    # with no rate-limit handling. Each workload child KS this applies gets a
+    # patch that scales its Deployments to 0. The DB, its backups, the secrets
+    # and the namespaces stay as they are. To unpark, remove the following patch.
     - target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization
