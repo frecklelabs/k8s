@@ -76,3 +76,82 @@ spec:
               memory: 16Mi
             limits:
               memory: 32Mi
+---
+# Proves the publisher's egress is exactly what reviewer-publisher-egress
+# allows. It carries the publisher's policy label, so it gets the same rules:
+# DNS for the two allowed names, pg-18a on 5432 and api.github.com on 443 must
+# be reachable; any other DNS name, the API server and any other address must
+# not. Exits non-zero unless every line matches. The name carries a version
+# because a Job's pod template is immutable: bump it to rerun.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: egress-canary-v2
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels:
+        freckle.systems/reviewer-egress: publisher
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: Never
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: probe
+          image: mirror.gcr.io/curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+          command: ["/bin/sh", "-c"]
+          # curl exit 7 (refused) and 28 (timeout) mean blocked; anything else
+          # means a connection was made. Postgres answers an HTTP request by
+          # closing the connection (curl 52/56): that is a connection.
+          args:
+            - |
+              bad=0
+              want() {
+                if [ "$1" = "$2" ]; then echo "OK $2 $3"; else echo "WRONG $2 $3 (want $1)"; bad=1; fi
+              }
+              conn() {
+                curl -sk -o /dev/null --connect-timeout 5 --max-time 10 "$1"
+                rc=$?
+                case "$rc" in
+                  7|28) echo BLOCKED ;;
+                  *) echo OPEN ;;
+                esac
+              }
+              dns() {
+                if timeout 10 nslookup "$1" >/dev/null 2>&1; then echo OPEN; else echo BLOCKED; fi
+              }
+              for tool in nslookup timeout; do
+                command -v "$tool" >/dev/null || { echo "MISSING $tool"; exit 2; }
+              done
+              want OPEN "$(dns api.github.com)" "dns api.github.com"
+              want OPEN "$(dns pg-18a-rw.db.svc.cluster.local)" "dns pg-18a-rw"
+              want BLOCKED "$(dns kubernetes.default.svc.cluster.local)" "dns kubernetes.default"
+              want BLOCKED "$(dns example.com)" "dns example.com"
+              want OPEN "$(conn http://pg-18a-rw.db.svc.cluster.local:5432/)" "postgres"
+              want OPEN "$(conn https://api.github.com/zen)" "github api"
+              want BLOCKED "$(conn https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT})" "apiserver"
+              want BLOCKED "$(conn https://1.1.1.1)" "external"
+              exit "$bad"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi

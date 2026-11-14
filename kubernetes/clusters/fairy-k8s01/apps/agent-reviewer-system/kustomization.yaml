@@ -6,3 +6,5 @@ namespace: agent-reviewer-system
 resources:
   - ./external-secrets.yaml
   - ./probe.yaml
+  - ./egress.yaml
+  - ./publisher.yaml

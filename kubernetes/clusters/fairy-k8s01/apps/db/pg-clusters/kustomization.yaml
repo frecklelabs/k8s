@@ -14,5 +14,6 @@ resources:
   - ./bookorbit-db.yaml
   - ./silo-db.yaml
   - ./cockpit-db.yaml
+  - ./reviewer-publisher-db.yaml
   - ./package-proxy-db.yaml
   - ./floppy-db.yaml
