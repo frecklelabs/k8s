@@ -1,0 +1,15 @@
+---
+# This ProxyGroup is the tailnet endpoint for the cluster's Kubernetes API.
+# Keep one of its two replicas up through voluntary disruptions such as node
+# drains during Talos upgrades, so a drain waits for the evicted replica to come
+# back Ready elsewhere before taking the second one.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: atlantis-k8s01-kube-apiserver
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      tailscale.com/parent-resource-type: proxygroup
+      tailscale.com/parent-resource: atlantis-k8s01-kube-apiserver
