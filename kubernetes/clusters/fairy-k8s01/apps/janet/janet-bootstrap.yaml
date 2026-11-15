@@ -44,3 +44,24 @@ spec:
   timeout: 5m
   prune: true
   wait: false
+  # Janet is parked (C-2212, 2026-11-15): its repo is archived, so the bundle
+  # can't change, and it called ChatGPT Codex, OpenAI auth, GitHub and Google
+  # with no rate-limit handling. Each workload child KS this applies gets a
+  # patch that scales its Deployments to 0. The DB, its backups, the secrets
+  # and the namespaces stay as they are. To unpark, delete this block.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: janet-(api|controller|scheduler|ui)
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                group: apps
+                kind: Deployment
+              patch: |
+                - op: replace
+                  path: /spec/replicas
+                  value: 0
