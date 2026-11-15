@@ -54,7 +54,12 @@ spec:
                 - rgw:$(BUCKET_NAME)
                 - /mirror
                 - --fast-list
-                - --transfers=8
+                # Pace writes to the NFS mirror (see the resources comment):
+                # fewer parallel files, one stream per file, and a rate the
+                # NAS can write back so dirty pages don't pile up in the pod.
+                - --transfers=4
+                - --multi-thread-streams=0
+                - --bwlimit=64M
                 - --stats-one-line
                 - --stats=0
                 - --log-level=INFO
@@ -90,9 +95,13 @@ spec:
                 readOnlyRootFilesystem: true
                 capabilities:
                   drop: [ALL]
-              # Syncing a fresh barman base backup (a few large objects) needs
-              # far more than the WAL-only runs: at 512Mi every attempt on the
-              # 2026-11-14 base was OOMKilled within seconds (C-2174).
+              # Memory here tracks bytes written, not rclone's buffers: NFS
+              # has no per-cgroup writeback throttling, so dirty pages of a
+              # large base backup are charged to this container until the
+              # memcg OOMs. Unpaced 8-transfer runs on the pg-18a base
+              # backups were OOMKilled ~5 s in at 512Mi and ~15-20 s in at
+              # 2Gi (C-2174, C-2424). The rate cap in args is the fix; the
+              # 2Gi limit is headroom.
               resources:
                 requests:
                   cpu: 50m
