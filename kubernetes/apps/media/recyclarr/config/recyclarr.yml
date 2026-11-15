@@ -105,33 +105,210 @@ radarr:
         rename: true
         standard: plex-tmdb
 
+    # TRaSH's standard movie sizes (the UHD Bluray + WEB profile's), not the
+    # SQP streaming-sized ones.
     quality_definition:
-      type: sqp-uhd
+      type: movie
 
+    # One profile for every movie: 2160p encodes, lossless audio strongly
+    # preferred, no remux tier (C-1980). SQP-1 replaced 114 lossless files with
+    # lossy encodes from 2026-10-18 on; this undoes that policy.
+    #
+    # The existing Radarr profile (every movie and both import lists use it)
+    # is rewritten in place, so nothing needs reassigning. Recyclarr here keeps
+    # no state between runs (/config is an emptyDir), so it finds that profile
+    # by name on every sync: the name must stay "[SQP] SQP-1 (2160p)" until
+    # Recyclarr has persistent state, or it would create a second profile and
+    # leave the old one unmanaged. Everything that matters is set explicitly
+    # below; every CF the SQP-1 guide entry brings in has an explicit score in
+    # custom_formats, so no SQP score-set value survives.
     quality_profiles:
-      - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
+      - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # guide: [SQP] SQP-1 (2160p)
+        name: "[SQP] SQP-1 (2160p)"
         reset_unmatched_scores:
           enabled: true
+        min_format_score: 0
+        min_upgrade_format_score: 1
+        upgrade:
+          allowed: true
+          until_quality: UHD HQ
+          # Never stop upgrading before lossless audio shows up.
+          until_score: 50000
+        qualities:
+          # Remuxes are never grabbed, but stay ranked above the encodes so the
+          # remuxes we still have (about 290) are never "upgraded" to an encode.
+          - name: Remux-2160p
+            enabled: false
+          - name: Remux-1080p
+            enabled: false
+          # Blu-ray and WEB 2160p in one equal group, so custom format score
+          # (lossless audio first) decides between them, not the source.
+          - name: UHD HQ
+            qualities:
+              - Bluray-2160p
+              - WEBDL-2160p
+              - WEBRip-2160p
+          # Not grabbed; ranked below so existing HD files upgrade to 2160p.
+          - name: HD
+            enabled: false
+            qualities:
+              - Bluray-1080p
+              - WEBDL-1080p
+              - WEBRip-1080p
+              - Bluray-720p
+              - WEBDL-720p
+              - WEBRip-720p
+
+    # Guide CF groups that would auto-sync onto the SQP-1 guide entry, with
+    # SQP scores (BCORE -10000, Scene -10000). Skipped; the formats from them
+    # we want are scored explicitly below.
+    custom_format_groups:
+      skip:
+        - ef20e67b95a381fb3bc6d1f06ea24f46  # [HDR Formats] HDR
+        - d9cc9a504e5ede6294c8b973aad4f028  # [Streaming Services] General
+        - 15b1cf0b6f1a1493856a4355907affee  # [Unwanted] Unwanted Formats SQP
 
     custom_formats:
-      - # HDR10+ Boost — Samsung S95F supports HDR10+
+      - # Lossless audio: the same score for all six, so there is no churn
+        # between lossless codecs. 6000 outweighs every video/tier bonus
+        # combined (at most ~3400), so lossless beats lossy across the group.
         trash_ids:
+          - 496f355514737f7d83bf7aa4d24f8169  # TrueHD ATMOS
+          - 2f22d89048b01681dde8afe203bf2e95  # DTS X
+          - 3cafb66171b47f226146a0770576870f  # TrueHD
+          - dcf3ec6938fa32445f590a4da84256cd  # DTS-HD MA
+          - a570d4a0e56a2874b64e5bfa55202a1b  # FLAC
+          - e7c2fcae07cbada050a0af3357491d7b  # PCM
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 6000
+
+      - # Lossy audio is allowed (WEB-only titles) but earns nothing. DD+ Atmos
+        # and bare Atmos are lossy, not evidence of TrueHD.
+        trash_ids:
+          - 417804f7f2c4308c1f4c5d380d4c4475  # ATMOS (undefined)
+          - 1af239278386be2919e1bcee0bde047e  # DD+ ATMOS
+          - 8e109e50e0a0b83a5098b056e13bf6db  # DTS-HD HRA
+          - 185f1dd7264c4562b9022d963ac37424  # DD+
+          - f9f847ac70a0af62ea4a08280b859636  # DTS-ES
+          - 1c1a4c5e823891c75bc50380a6866f73  # DTS
+          - 240770601cc226190c367ef59aba7463  # AAC
+          - c2998bd0d90ed5621d8df281e839436e  # DD
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 0
+
+      - # Video: HDR, Dolby Vision, HDR10+ (the Samsung S95F supports HDR10+).
+        trash_ids:
+          - 493b6d1dbec3c3364c59d7607f7e3405  # HDR
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 500
+      - trash_ids:
+          - b337d6812e06c200ec9a2d3cfa9d20a7  # DV Boost
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1000
+      - trash_ids:
           - caa37d0df9c348912df1fb1d88f9273a  # HDR10+ Boost
         assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 100
 
-      - # SDR (no WEBDL) — block SDR Remux/Bluray, allow SDR WEB for older movies
+      - # Release tiers (TRaSH UHD Bluray + WEB scores).
         trash_ids:
-          - 25c12f78430a3a23413652cbd1d48d77  # SDR (no WEBDL)
+          - 4d74ac4c4db0b64bff6ce0cffef99bf0  # UHD Bluray Tier 01
         assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1800
+      - trash_ids:
+          - a58f517a70193f8e578056642178419d  # UHD Bluray Tier 02
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1750
+      - trash_ids:
+          - e71939fae578037e7aed3ee219bbe7c1  # UHD Bluray Tier 03
+          - c20f169ef63c5f40c2def54abaf4438e  # WEB Tier 01
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1700
+      - trash_ids:
+          - 403816d65392c79236dcb6dd591aeda4  # WEB Tier 02
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1650
+      - trash_ids:
+          - af94e0fe497124d1f9ce732069ec8c3b  # WEB Tier 03
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 1600
+      - trash_ids:
+          - e7718d7a3ce595f289bfee26adc178f5  # Repack/Proper
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 5
+      - trash_ids:
+          - ae43b294509409a6a13919dedd4764c4  # Repack2
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 6
+      - trash_ids:
+          - 5caaaa1c08c1742aa4342d8c4cc463f2  # Repack3
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 7
 
-      - # Unwanted
+      - # Streaming sources with better encodes (TRaSH default scores).
         trash_ids:
+          - cc5e51a9e85a6296ceefe097a77f12f4  # BCORE
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 15
+      - trash_ids:
+          - 16622a6911d1ab5d5b8b713d5b0036d4  # CRiT
+          - 2a6039655313bf5dab1e43523b62c374  # MA
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 20
+
+      - # SQP-only formats the guide entry still brings in: neutral here. The
+        # 1080p/720p qualities aren't grabbed anyway.
+        trash_ids:
+          - ed27ebfef2f323e964fb1f61391bcb35  # HD Bluray Tier 01
+          - c20c8647f2746a1f4c4262b0fbbeeeae  # HD Bluray Tier 02
+          - 5608c71bcebba0a5e666223bae8c9227  # HD Bluray Tier 03
+          - 839bea857ed2c0a8e084f3cbdbd65ecb  # x265 (no HDR/DV)
+          - 820b09bb9acbfde9c35c71e0e565dad8  # 1080p
+          - b2be17d608fc88818940cd1833b0b24c  # 720p
+        assign_scores_to:
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: 0
+
+      - # Rejected. -100000 rather than the guide's -10000, so a blocked
+        # release stays negative even with every bonus above stacked.
+        # hallowed and BHDStudio are the streaming-encode groups that replaced
+        # most of the lossless files; a tracker removed the hallowed Shawshank
+        # for "lossy audio, low quality".
+        trash_ids:
+          - ed38b889b31be83fda192888e2286d83  # BR-DISK
+          - e6886871085226c3da1830830146846c  # Generated Dynamic HDR
+          - 90a6f9a284dff5103f6346090e6280c8  # LQ
+          - e204b80c87be9497a8a6eaff48f72905  # LQ (Release Title)
+          - dc98083864ea246d05a42df0d05f81cc  # x265 (HD)
+          - b8cd450cbfa689c0259a01d9e29ba3d6  # 3D
+          - bfd8eb01832d646a0a89c4deb46f8564  # Upscaled
+          - 0a3f082873eb454bde444150b70253cc  # Extras
+          - 712d74cd88bceb883ee32f773656b1f5  # Sing-Along Versions
+          - cae4ca30163749b891686f95532519bd  # AV1
+          - 923b6abef9b17f937fab56cfcf89e1f1  # DV (w/o HDR fallback)
           - b6832f586342ef70d9c128d40c07b872  # Bad Dual Groups
+          - c465ccc73923871b3eb1802042331306  # Line/Mic Dubbed
           - cc444569854e9de0b084ab2b8b1532b2  # Black and White Editions
           - ae9b7c9ebde1f3bd336a8cbd1ec4c5e5  # No-RlsGroup
           - 7357cf5161efbf8c4d5d0c30b4815ee2  # Obfuscated
           - 5c44f52a8714fdd79bb4d98e2673be1f  # Retags
+          - 5153ec7413d9dae44e24275589b5e944  # BHDStudio
+          - 7a0d1ad358fee9f5b074af3ef3f9d9ef  # hallowed
         assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
+          - trash_id: 5128baeb2b081b72126bc8482b2a86a0
+            score: -100000
