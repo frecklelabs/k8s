@@ -5,7 +5,12 @@
 # qui can start these runs but not schedule them. A full pass takes a few
 # days at one search per interval (60 s unless the pointer sets
 # QUI_SEEDED_SEARCH_INTERVAL_SECONDS); the 12 h cooldown skips recently
-# searched torrents. No indexerIds means every enabled torznab indexer.
+# searched torrents. An empty indexerIds (the default when the pointer
+# leaves QUI_SEEDED_SEARCH_INDEXER_IDS unset) means every enabled torznab
+# indexer; a pointer that lists ids searches only those, so a new indexer
+# has to be added there by hand. qui runs one seeded search at a time and
+# answers a second start with 409, which fails the Job: keep any other run
+# (e.g. ./anime-search) on days this one has finished.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -46,7 +51,7 @@ spec:
                 - -H
                 - "Content-Type: application/json"
                 - -d
-                - '{"instanceId":${QUI_REEL_INSTANCE_ID},"categories":["library-seed","seed","tv-sonarr","radarr","games"],"intervalSeconds":${QUI_SEEDED_SEARCH_INTERVAL_SECONDS:=60},"cooldownMinutes":720}'
+                - '{"instanceId":${QUI_REEL_INSTANCE_ID},"categories":["library-seed","seed","tv-sonarr","radarr","games"],"intervalSeconds":${QUI_SEEDED_SEARCH_INTERVAL_SECONDS:=60},"cooldownMinutes":720,"indexerIds":[${QUI_SEEDED_SEARCH_INDEXER_IDS:=}]}'
                 - http://qui/api/cross-seed/search/run
               env:
                 - name: QUI_API_KEY

@@ -1,0 +1,64 @@
+---
+# Seeded search of the anime downloads (category tv-anime) against the
+# anime-only indexers, which the main qui-seeded-search run leaves out.
+# Same pacing as the main run: one search per interval, 12 h cooldown.
+# qui runs one seeded search at a time and answers a second start with 409,
+# which fails the Job, so the pointer puts this run on days the main run
+# (a day or so per pass) has finished.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: qui-seeded-search-anime
+spec:
+  schedule: "0 3 ${QUI_ANIME_SEARCH_DAYS} * *"
+  timeZone: America/Chicago
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: start-run
+              image: mirror.gcr.io/curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+              # $(QUI_API_KEY) is expanded by the kubelet from the env below.
+              args:
+                - -sS
+                - --fail-with-body
+                - -X
+                - POST
+                - -H
+                - "X-API-Key: $(QUI_API_KEY)"
+                - -H
+                - "Content-Type: application/json"
+                - -d
+                - '{"instanceId":${QUI_REEL_INSTANCE_ID},"categories":["tv-anime"],"intervalSeconds":${QUI_SEEDED_SEARCH_INTERVAL_SECONDS:=60},"cooldownMinutes":720,"indexerIds":[${QUI_ANIME_SEARCH_INDEXER_IDS}]}'
+                - http://qui/api/cross-seed/search/run
+              env:
+                - name: QUI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: qui-cron-secret
+                      key: QUI_API_KEY
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 32Mi
