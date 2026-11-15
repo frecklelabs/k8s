@@ -90,12 +90,15 @@ spec:
                 readOnlyRootFilesystem: true
                 capabilities:
                   drop: [ALL]
+              # Syncing a fresh barman base backup (a few large objects) needs
+              # far more than the WAL-only runs: at 512Mi every attempt on the
+              # 2026-11-14 base was OOMKilled within seconds (C-2174).
               resources:
                 requests:
                   cpu: 50m
-                  memory: 128Mi
+                  memory: 256Mi
                 limits:
-                  memory: 512Mi
+                  memory: 2Gi
               volumeMounts:
                 - name: mirror
                   mountPath: /mirror
