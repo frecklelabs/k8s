@@ -1,0 +1,91 @@
+---
+# Under Wraps DeepSeek evaluation, native Messages path (C-2555, design
+# agent-context docs/design/claude-code-deepseek-native-messages.md, C-2469).
+# Additive beside underwraps-eval.yaml, which stays as it is (C-2122 hold).
+#
+# Clients speak Anthropic Messages (POST /anthropic/v1/messages) with the alias
+# underwraps-deepseek-native. The backend schema is Anthropic, so the gateway
+# does not translate to Chat Completions: it only overwrites `model` and
+# forwards the body to https://openrouter.ai/api/v1/messages, and reads token
+# usage from the native stream.
+#
+# Same Backend `openrouter` (and its BackendTLSPolicy) and same Secret
+# openrouter-zdr-api-key as openrouter.yaml, so the same key and the same zdr
+# workspace guardrail. Auth is type APIKey (Authorization: Bearer), which is
+# what OpenRouter's Messages endpoint expects; AnthropicAPIKey (x-api-key)
+# would be wrong here.
+#
+# count_tokens: v1.2.0 ignores the backend prefix for
+# POST /anthropic/v1/messages/count_tokens and always sends it to
+# /v1/messages/count_tokens, i.e. https://openrouter.ai/v1/messages/count_tokens,
+# outside /api/v1, with the key. OpenRouter documents no such path; clients
+# must tolerate it failing.
+#
+# Attached to the `eval` listener (port 8081) only: never drop sectionName, or
+# the route attaches to every listener. The ai-gateway-ingress
+# CiliumNetworkPolicy admitting only labelled eval pods is unchanged.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-zdr-messages
+spec:
+  schema:
+    name: Anthropic
+    prefix: /api/v1
+  backendRef:
+    group: gateway.envoyproxy.io
+    kind: Backend
+    name: openrouter
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: openrouter-zdr-messages
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: openrouter-zdr-messages
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: openrouter-zdr-api-key
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: underwraps-eval-native
+spec:
+  parentRefs:
+    - name: ai
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: eval
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: underwraps-deepseek-native
+      backendRefs:
+        - name: openrouter-zdr-messages
+          modelNameOverride: deepseek/deepseek-v4.1-flash-1017
+          # The passthrough forwards top-level fields the translator dropped.
+          # Remove OpenRouter-only fields that would change the model, price,
+          # routing or where data goes. v1.2.0 logs a failed mutation instead
+          # of rejecting the request, so this is hardening, not a guarantee.
+          bodyMutation:
+            remove:
+              - models
+              - fallbacks
+              - provider
+              - route
+              - plugins
+              - safeguards
+              - deferred_tools
+              - stop_server_tools_when
+              - speed
+              - service_tier
+              - trace
+      timeouts:
+        request: 1800s
