@@ -3,7 +3,9 @@
 # reviewer App's read-only installation token and records what it would have
 # published; it has no write path (agent-platform docs/reviewer-publisher.md).
 # Its only work source is the cockpit's reviewer_shadow_requests queue, which
-# stays empty until Nicole enrols a repository (REVIEWER_SHADOW_REPOS).
+# stays empty until Nicole enrols a repository (REVIEWER_SHADOW_REPOS). With
+# REVIEWER_SESSIONS=launch its sessions run as conductor pr-reviewer runs,
+# which see only each task's frozen, redacted inputs.
 #
 # The App key and the database role exist only in this namespace. The image is
 # pinned by digest, so every publisher version is a reviewed change here.
@@ -103,11 +105,23 @@ spec:
           type: RuntimeDefault
       containers:
         - name: publisher
-          image: ghcr.io/frecklelabs/agent-platform/cockpit:main-20261115T193211Z-cd2609b@sha256:4feef241d624552ab525d04d7cd349d921f1c19ab34123f7f9e43929d1470aaa
+          image: ghcr.io/frecklelabs/agent-platform/cockpit:main-20261116T055236Z-195807d@sha256:d17e515f472616ffa84fc841bab7ae6dd60a498656c2f8deb8592dc5be40343f
           args: ["reviewer-publisher"]
           env:
             - name: REVIEWER_PUBLISHER_MODE
               value: shadow
+            # The measurement launch Nicole approved (C-1960 msg 88462):
+            # planned sessions become reviewer tasks that the conductor runs
+            # (REVIEWER_SESSION_RUNS=on there). Spend is bounded by the
+            # cockpit's reviewer_ceilings setting (4 Claude sessions a day
+            # until she changes it). Verdicts stay shadow: nothing posts.
+            - name: REVIEWER_SESSIONS
+              value: launch
+            # One evaluation at a time: with run_caps.review 4 that leaves two
+            # review slots for independent reviews (agent-platform
+            # docs/reviewer.md section 8, "Launch settings").
+            - name: REVIEWER_CONCURRENCY
+              value: "1"
             - name: REVIEWER_APP_KEY_FILE
               value: /var/run/reviewer/app.pem
             - name: REVIEWER_LISTEN
