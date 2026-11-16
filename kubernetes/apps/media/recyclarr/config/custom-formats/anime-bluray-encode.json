@@ -1,0 +1,16 @@
+{
+  "trash_id": "a05944f1aca8fbc3cf608466dc467200",
+  "name": "Anime Bluray Encode",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "Bluray",
+      "implementation": "SourceSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "value": 6
+      }
+    }
+  ]
+}

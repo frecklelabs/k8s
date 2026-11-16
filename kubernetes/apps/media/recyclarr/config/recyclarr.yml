@@ -19,7 +19,7 @@ sonarr:
         anime: default
 
     # Sonarr v5 keeps quality sizes per profile; this applies to the TV profile.
-    # The anime profile sets its own below.
+    # The anime profiles set their own below.
     quality_definition:
       type: series
 
@@ -27,35 +27,80 @@ sonarr:
       - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
         reset_unmatched_scores:
           enabled: true
+      # Two anime profiles from the same guide profile (a Recyclarr "profile
+      # variant"; each needs an explicit name). [Anime] Remux-1080p keeps its
+      # name so the existing Sonarr profile, and the series, Seerr and import
+      # lists on it, are adopted in place rather than duplicated (Recyclarr
+      # keeps no state here and matches profiles by name). [Anime] English is
+      # for dub-native and kids' shows: it also takes English-only releases.
+      # Both share qualities, sizes and the scoring layers below.
+      #
+      # Sonarr ranks quality before custom-format score, so Blu-ray, 4K WEB
+      # and 1080p WEB share one allowed group ("Anime 1080p+", also the
+      # cutoff) and custom formats decide between them. Otherwise a Blu-ray
+      # (or 4K) release without an English dub beats a dual-audio WEB pack.
+      # 720p is merged the same way. Remuxes and UHD Blu-ray stay disabled
+      # (a remux season runs to 100+ GB) but are listed on top, so remux
+      # files we already have are past the cutoff and never "upgraded". HDTV
+      # stays a tier below, so an HDTV grab keeps upgrading.
+      # The guide's 100 minimum only passes groups on its anime tier lists,
+      # which rejects most releases of older shows on our trackers. 0 still
+      # blocks everything scored -10000 (LQ groups, raws, AV1, VOSTFR, non-
+      # English dubs).
       - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
+        name: "[Anime] Remux-1080p"
         reset_unmatched_scores:
           enabled: true
-        # Good anime encodes are small; TRaSH's anime sizes lower the minimums.
+        # Good anime encodes are small; TRaSH's anime sizes lower the minimums
+        # (and allow 2160p sizes).
         quality_definition:
           type: anime
-        # Blu-ray encodes on top: most anime releases (BD batches especially)
-        # are Blu-ray, and we have the space. Remux stays disabled (a full
-        # remux season runs to 100+ GB) but listed above Bluray-1080p, so
-        # remux files we already have aren't treated as upgradeable. Upgrades
-        # stop at Bluray-1080p. HDTV sits below WEB, so an HDTV grab keeps
-        # upgrading until a WEB or Blu-ray release shows up.
-        # The guide's 100 minimum only passes groups on its anime tier lists,
-        # which rejects most releases of older shows on our trackers. 0 still
-        # blocks everything the guide scores -10000 (LQ groups, raws, AV1).
         min_format_score: 0
         upgrade:
           allowed: true
-          until_quality: Bluray-1080p
+          until_quality: Anime 1080p+
         qualities:
+          - name: Bluray-2160p Remux
+            enabled: false
+          - name: Bluray-2160p
+            enabled: false
           - name: Bluray-1080p Remux
             enabled: false
-          - name: Bluray-1080p
-          - name: WEB 1080p
-            qualities: [WEBRip-1080p, WEBDL-1080p]
+          - name: Anime 1080p+
+            qualities: [Bluray-1080p, WEBRip-2160p, WEBDL-2160p, WEBRip-1080p, WEBDL-1080p]
           - name: HDTV-1080p
-          - name: Bluray-720p
-          - name: WEB 720p
-            qualities: [WEBRip-720p, WEBDL-720p]
+          - name: Anime 720p
+            qualities: [Bluray-720p, WEBRip-720p, WEBDL-720p]
+          - name: HDTV-720p
+          - name: Bluray-480p
+            enabled: false
+          - name: WEB 480p
+            qualities: [WEBRip-480p, WEBDL-480p]
+          - name: DVD
+          - name: SDTV
+      - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
+        name: "[Anime] English"
+        reset_unmatched_scores:
+          enabled: true
+        quality_definition:
+          type: anime
+        min_format_score: 0
+        upgrade:
+          allowed: true
+          until_quality: Anime 1080p+
+        # Same list as [Anime] Remux-1080p; keep them in step.
+        qualities:
+          - name: Bluray-2160p Remux
+            enabled: false
+          - name: Bluray-2160p
+            enabled: false
+          - name: Bluray-1080p Remux
+            enabled: false
+          - name: Anime 1080p+
+            qualities: [Bluray-1080p, WEBRip-2160p, WEBDL-2160p, WEBRip-1080p, WEBDL-1080p]
+          - name: HDTV-1080p
+          - name: Anime 720p
+            qualities: [Bluray-720p, WEBRip-720p, WEBDL-720p]
           - name: HDTV-720p
           - name: Bluray-480p
             enabled: false
@@ -73,6 +118,10 @@ sonarr:
         assign_scores_to:
           - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
             score: 10
+          - name: "[Anime] Remux-1080p"
+            score: 10
+          - name: "[Anime] English"
+            score: 10
       - # Unwanted
         trash_ids:
           - 32b367365729d530ca1c124a0b180c64  # Bad Dual Groups
@@ -82,13 +131,58 @@ sonarr:
         assign_scores_to:
           - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
 
-      - # Anime: prefer releases with an English dub. 1000 outweighs the gap
-        # between any two WEB tiers, so dual audio wins at the same quality.
+      - # Anime scoring, in layers. Each layer outweighs everything below it
+        # combined, so at equal quality group the order is:
+        #   1. English audio: dual audio 6000, then (on [Anime] English only)
+        #      English-only 3000, then Japanese-only 0.
+        #   2. WEB 2160p +2200 > Blu-ray encode +700 > 1080p WEB (0).
+        #   3. The guide's group tiers (BD 700-1400, WEB 100-600), streaming
+        #      service (0-6), v0-v4 (-51..4) and Season Pack (+10).
+        # The guide part of a score runs from -51 to 1420, so: a Blu-ray file
+        # (>= 649) is never replaced by 1080p WEB (<= 620) with the same audio;
+        # 4K WEB (>= 2149) beats any Blu-ray (<= 2120); and no video or group
+        # bonus (<= 2820) makes up for losing the English dub.
         trash_ids:
           - 418f50b10f1907201b6cfdf881f467b7  # Anime Dual Audio
         assign_scores_to:
-          - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
-            score: 1000
+          - name: "[Anime] Remux-1080p"
+            score: 6000
+          - name: "[Anime] English"
+            score: 6000
+      - # English-only releases. Blocked (TRaSH's -10000) on the default anime
+        # profile: dub-only anime releases are often TV or edited cuts and
+        # lose the original audio. Dub-native and kids' shows (Pokemon,
+        # Beyblade) go on [Anime] English, where they are wanted.
+        trash_ids:
+          - 9c14d194486c4014d422adc64092d794  # Dubs Only
+        assign_scores_to:
+          - name: "[Anime] Remux-1080p"
+            score: -10000
+          - name: "[Anime] English"
+            score: 3000
+      - # Local custom formats (recyclarr-custom-formats ConfigMap, see
+        # settings.yml).
+        trash_ids:
+          - fd27cd9649c8cd9bdcc3f714d3dc6b49  # Anime Non-English Dub
+        assign_scores_to:
+          - name: "[Anime] Remux-1080p"
+            score: -10000
+          - name: "[Anime] English"
+            score: -10000
+      - trash_ids:
+          - edd7799af318480331c2ec1da6014d9d  # Anime WEB 2160p
+        assign_scores_to:
+          - name: "[Anime] Remux-1080p"
+            score: 2200
+          - name: "[Anime] English"
+            score: 2200
+      - trash_ids:
+          - a05944f1aca8fbc3cf608466dc467200  # Anime Bluray Encode
+        assign_scores_to:
+          - name: "[Anime] Remux-1080p"
+            score: 700
+          - name: "[Anime] English"
+            score: 700
 
 radarr:
   radarr:

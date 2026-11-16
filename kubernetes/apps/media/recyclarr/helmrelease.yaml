@@ -79,5 +79,27 @@ spec:
           - path: /config/recyclarr.yml
             subPath: recyclarr.yml
             readOnly: true
+      settings-file:
+        type: configMap
+        name: recyclarr-settings
+        globalMounts:
+          - path: /config/settings.yml
+            subPath: settings.yml
+            readOnly: true
+      # One subPath mount per file: a whole-ConfigMap mount would also put
+      # the kubelet's ..data directories in the folder Recyclarr reads.
+      custom-formats:
+        type: configMap
+        name: recyclarr-custom-formats
+        globalMounts:
+          - path: /config/custom-formats/anime-bluray-encode.json
+            subPath: anime-bluray-encode.json
+            readOnly: true
+          - path: /config/custom-formats/anime-non-english-dub.json
+            subPath: anime-non-english-dub.json
+            readOnly: true
+          - path: /config/custom-formats/anime-web-2160p.json
+            subPath: anime-web-2160p.json
+            readOnly: true
       tmp:
         type: emptyDir

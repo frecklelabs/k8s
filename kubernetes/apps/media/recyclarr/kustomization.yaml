@@ -9,5 +9,13 @@ configMapGenerator:
   - name: recyclarr-configmap
     files:
       - recyclarr.yml=./config/recyclarr.yml
+  - name: recyclarr-settings
+    files:
+      - settings.yml=./config/settings.yml
+  - name: recyclarr-custom-formats
+    files:
+      - ./config/custom-formats/anime-bluray-encode.json
+      - ./config/custom-formats/anime-non-english-dub.json
+      - ./config/custom-formats/anime-web-2160p.json
 generatorOptions:
   disableNameSuffixHash: true
