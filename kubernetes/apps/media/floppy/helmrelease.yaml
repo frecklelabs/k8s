@@ -71,6 +71,9 @@ spec:
               PGID: "1000"
               FLOPPY_DATA_DIR: /floppy/db
               BACKUP_DIR: /floppy/backups
+              # Trakt PKCE public client ID: it appears in every authorize URL, so it is
+              # not a secret. No TRAKT_API_SECRET: Floppy uses PKCE when none is set.
+              TRAKT_API: BH8FANPPLg40aO7R8bKMLUi0gMHeMOmKn95AcWkYyTw # gitleaks:allow
             envFrom: &secrets
               - secretRef:
                   name: floppy-secrets
