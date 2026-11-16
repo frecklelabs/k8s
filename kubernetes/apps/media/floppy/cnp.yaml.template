@@ -1,4 +1,13 @@
 ---
+# PARKED (C-2876, 2026-11-16): renamed from cnp.yaml and dropped from
+# kustomization.yaml, so Flux prunes it and Floppy runs with no policy. The
+# egress allowlist was too narrow (it blocked api.trakt.tv for the Trakt OAuth
+# import, and itunes.apple.com), and nobody had listed everything Floppy
+# reaches. While it is parked we observe Floppy's real traffic, then rebuild
+# this policy from that evidence and restore it as cnp.yaml. Ingress was locked
+# down here too, so it is open during the window; the route still goes through
+# the tailnet gateway.
+#
 # App OIDC is user-specific; the gateway also protects startup recovery pages.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy

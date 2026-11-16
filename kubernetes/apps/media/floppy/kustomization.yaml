@@ -5,7 +5,6 @@ kind: Kustomization
 resources:
   - externalsecret.yaml
   - helmrelease.yaml
-  - cnp.yaml
   - oidc.yaml
 configMapGenerator:
   - name: floppy-bootstrap
