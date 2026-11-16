@@ -28,11 +28,13 @@ sonarr:
         reset_unmatched_scores:
           enabled: true
       # Two anime profiles from the same guide profile (a Recyclarr "profile
-      # variant"; each needs an explicit name). [Anime] Remux-1080p keeps its
-      # name so the existing Sonarr profile, and the series, Seerr and import
-      # lists on it, are adopted in place rather than duplicated (Recyclarr
-      # keeps no state here and matches profiles by name). [Anime] English is
-      # for dub-native and kids' shows: it also takes English-only releases.
+      # variant"; each needs an explicit name). [Anime] Default is the guide's
+      # [Anime] Remux-1080p renamed, since remuxes are off and 4K WEB is
+      # allowed. Recyclarr keeps no state here and matches profiles by name,
+      # so a rename must happen in Sonarr first (same id; series, Seerr and
+      # import lists follow the id), then here; changing only this name
+      # creates a second, empty profile. [Anime] English is for dub-native
+      # and kids' shows: it also takes English-only releases.
       # Both share qualities, sizes and the scoring layers below.
       #
       # Sonarr ranks quality before custom-format score, so Blu-ray, 4K WEB
@@ -48,7 +50,7 @@ sonarr:
       # blocks everything scored -10000 (LQ groups, raws, AV1, VOSTFR, non-
       # English dubs).
       - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
-        name: "[Anime] Remux-1080p"
+        name: "[Anime] Default"
         reset_unmatched_scores:
           enabled: true
         # Good anime encodes are small; TRaSH's anime sizes lower the minimums
@@ -88,7 +90,7 @@ sonarr:
         upgrade:
           allowed: true
           until_quality: Anime 1080p+
-        # Same list as [Anime] Remux-1080p; keep them in step.
+        # Same list as [Anime] Default; keep them in step.
         qualities:
           - name: Bluray-2160p Remux
             enabled: false
@@ -118,7 +120,7 @@ sonarr:
         assign_scores_to:
           - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
             score: 10
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: 10
           - name: "[Anime] English"
             score: 10
@@ -136,7 +138,7 @@ sonarr:
           - 026d5aadd1a6b4e550b134cb6c72b3ca  # Uncensored
           - b2550eb333d27b75833e25b8c2557b38  # 10bit
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: 0
           - name: "[Anime] English"
             score: 0
@@ -155,7 +157,7 @@ sonarr:
         trash_ids:
           - 418f50b10f1907201b6cfdf881f467b7  # Anime Dual Audio
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: 6000
           - name: "[Anime] English"
             score: 6000
@@ -166,7 +168,7 @@ sonarr:
         trash_ids:
           - 9c14d194486c4014d422adc64092d794  # Dubs Only
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: -10000
           - name: "[Anime] English"
             score: 3000
@@ -175,21 +177,21 @@ sonarr:
         trash_ids:
           - fd27cd9649c8cd9bdcc3f714d3dc6b49  # Anime Non-English Dub
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: -10000
           - name: "[Anime] English"
             score: -10000
       - trash_ids:
           - edd7799af318480331c2ec1da6014d9d  # Anime WEB 2160p
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: 2200
           - name: "[Anime] English"
             score: 2200
       - trash_ids:
           - a05944f1aca8fbc3cf608466dc467200  # Anime Bluray Encode
         assign_scores_to:
-          - name: "[Anime] Remux-1080p"
+          - name: "[Anime] Default"
             score: 700
           - name: "[Anime] English"
             score: 700
