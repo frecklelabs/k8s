@@ -14,6 +14,15 @@ spec:
   superuserSecret:
     name: pg-17a-secrets
   enableSuperuserAccess: true
+  managed:
+    roles:
+      - name: package_proxy
+        ensure: present
+        login: true
+        superuser: false
+        connectionLimit: 40
+        passwordSecret:
+          name: package-proxy-db-role
   postgresql:
     parameters:
       max_connections: "400"

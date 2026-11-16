@@ -1,0 +1,9 @@
+# The registry is reachable only inside the runner cluster.
+[registry."docker.io"]
+  mirrors = ["zot.zot.svc.cluster.local:5000"]
+[registry."ghcr.io"]
+  mirrors = ["zot.zot.svc.cluster.local:5000/ghcr.io"]
+[registry."gcr.io"]
+  mirrors = ["zot.zot.svc.cluster.local:5000/gcr.io"]
+[registry."zot.zot.svc.cluster.local:5000"]
+  http = true

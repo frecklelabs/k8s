@@ -43,12 +43,42 @@ spec:
       name: actions-runner-controller
       namespace: actions-runner-system
     template:
+      metadata:
+        labels:
+          dev-platform.freckle.tools/package-proxy-client: "true"
       spec:
         automountServiceAccountToken: false
+        volumes:
+          - name: buildkit-config
+            configMap:
+              name: freckle-actions-buildkit
         containers:
           - name: runner
             image: ghcr.io/actions/actions-runner:2.338.2
             command: ["/home/runner/run.sh"]
+            env:
+              - name: GOPROXY
+                value: http://package-proxy.dev-platform.svc.cluster.local:8080/go
+              - name: GOSUMDB
+                value: sum.golang.org http://package-proxy.dev-platform.svc.cluster.local:8080/go/sumdb/sum.golang.org
+              - name: GOPRIVATE
+                value: github.com/frecklelabs/*
+              - name: GONOPROXY
+                value: github.com/frecklelabs/*
+              - name: npm_config_registry
+                value: http://package-proxy.dev-platform.svc.cluster.local:8080/npm/
+              - name: PIP_INDEX_URL
+                value: http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/
+              - name: PIP_TRUSTED_HOST
+                value: package-proxy.dev-platform.svc.cluster.local
+              - name: BUILDKITD_CONFIG
+                value: /etc/buildkit/buildkitd.toml
+              - name: CI_REGISTRY
+                value: zot.zot.svc.cluster.local:5000
+            volumeMounts:
+              - name: buildkit-config
+                mountPath: /etc/buildkit
+                readOnly: true
             resources:
               requests:
                 cpu: 500m
@@ -70,6 +100,12 @@ spec:
               - op: test
                 path: /spec/template/spec/initContainers/1/name
                 value: dind
+              - op: add
+                path: /spec/template/spec/initContainers/1/args/-
+                value: --registry-mirror=http://zot.zot.svc.cluster.local:5000
+              - op: add
+                path: /spec/template/spec/initContainers/1/args/-
+                value: --insecure-registry=zot.zot.svc.cluster.local:5000
               - op: add
                 path: /spec/template/spec/initContainers/1/resources
                 value:

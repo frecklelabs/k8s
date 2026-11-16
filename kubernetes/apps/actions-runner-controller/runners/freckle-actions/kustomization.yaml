@@ -6,3 +6,10 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
+configMapGenerator:
+  - name: freckle-actions-buildkit
+    files:
+      - buildkitd.toml
+# HelmRelease references are not rewritten by Kustomize's built-in name rules.
+generatorOptions:
+  disableNameSuffixHash: true

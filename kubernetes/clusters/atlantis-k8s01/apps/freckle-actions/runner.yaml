@@ -16,6 +16,8 @@ spec:
       namespace: actions-runner-system
     - name: freckle-actions-secrets
       namespace: flux-system
+    - name: package-proxy
+      namespace: dev-platform
   interval: 1h
   path: ./kubernetes/apps/actions-runner-controller/runners/freckle-actions
   prune: true

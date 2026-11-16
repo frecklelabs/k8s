@@ -14,6 +14,24 @@ spec:
     - toEndpoints:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: freckle-actions
+    # World egress excludes cluster identities, including the build registry.
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: zot
+            app.kubernetes.io/name: zot
+      toPorts:
+        - ports:
+            - port: "5000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: dev-platform
+            app.kubernetes.io/instance: package-proxy
+            app.kubernetes.io/name: proxy
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
   egressDeny:
     - toCIDRSet:
         - cidr: 10.0.0.0/8
