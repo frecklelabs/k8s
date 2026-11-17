@@ -73,6 +73,15 @@ spec:
             path: /store01/Movies
             subPath: Movies
             readOnly: true
+        # Reel works far harder than the base sizing (C-2915): p95 about 3Gi,
+        # peaks up to about 8Gi. Request covers the steady state; the limit
+        # leaves room for peaks.
+        - op: replace
+          path: /spec/values/controllers/qbittorrent/containers/app/resources/requests/memory
+          value: 4Gi
+        - op: replace
+          path: /spec/values/controllers/qbittorrent/containers/app/resources/limits/memory
+          value: 16Gi
         # nodePort = transfer port: peers dial <node IPv6>:<port> (pod IPv6
         # egress leaves from the node's public IPv6); eTP Local, so only the
         # pod's node answers. IPv4 still arrives via the LB IP (border1 DNAT).

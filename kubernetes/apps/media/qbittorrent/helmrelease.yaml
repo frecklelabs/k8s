@@ -70,11 +70,14 @@ spec:
               runAsNonRoot: true
               seccompProfile:
                 type: RuntimeDefault
+            # Sized from 30 days of working set (C-2915): a light instance
+            # peaks under 1Gi. Heavier instances raise both in their pointer.
             resources:
               requests:
                 cpu: 100m
+                memory: 1Gi
               limits:
-                memory: 18Gi
+                memory: 4Gi
     defaultPodOptions:
       automountServiceAccountToken: false
       securityContext:
