@@ -48,6 +48,8 @@ spec:
           dev-platform.freckle.tools/package-proxy-client: "true"
       spec:
         automountServiceAccountToken: false
+        # Pod-level, so it covers the runner and the chart's dind sidecar (C-2906).
+        priorityClassName: ci-runner-low
         volumes:
           - name: buildkit-config
             configMap:
