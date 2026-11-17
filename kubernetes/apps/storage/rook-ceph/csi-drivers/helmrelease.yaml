@@ -59,6 +59,37 @@ spec:
             - key: nvidia.com/gpu
               operator: Exists
               effect: NoSchedule
+          # Explicit CPU requests (C-1558, C-2919). The Driver CRs carried the
+          # requests Rook wrote when it created them (250m per plugin, 100m
+          # per sidecar), which this chart never rendered. Memory restates
+          # those live values so Helm owns the whole block.
+          resources:
+            plugin:
+              requests: {cpu: 50m, memory: 512Mi}
+              limits: {memory: 1Gi}
+            registrar:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+        controllerPlugin:
+          resources:
+            plugin:
+              requests: {cpu: 50m, memory: 512Mi}
+              limits: {memory: 1Gi}
+            omapGenerator:
+              requests: {cpu: 10m, memory: 512Mi}
+              limits: {memory: 1Gi}
+            attacher:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            provisioner:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            resizer:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            snapshotter:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
       cephfs:
         enabled: true
         name: rook-ceph.cephfs.csi.ceph.com
@@ -69,6 +100,30 @@ spec:
             - key: nvidia.com/gpu
               operator: Exists
               effect: NoSchedule
+          resources:
+            plugin:
+              requests: {cpu: 50m, memory: 512Mi}
+              limits: {memory: 1Gi}
+            registrar:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+        controllerPlugin:
+          resources:
+            plugin:
+              requests: {cpu: 50m, memory: 512Mi}
+              limits: {memory: 1Gi}
+            attacher:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            provisioner:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            resizer:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
+            snapshotter:
+              requests: {cpu: 10m, memory: 128Mi}
+              limits: {memory: 256Mi}
       nfs:
         enabled: false
         name: rook-ceph.nfs.csi.ceph.com
