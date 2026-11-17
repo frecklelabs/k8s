@@ -119,9 +119,6 @@ spec:
       - name: dranet
         args:
         - /dranet
-        # Kept at 4 for now: the per-scan "Found N devices" line is V(4), and
-        # it's how the rescan cadence per node is compared (C-2918).
-        - --v=4
         - --hostname-override=$(NODE_NAME)
         # Bare metal: skip the cloud metadata probes (GCE, AWS, Azure, OKE,
         # Alibaba, CKS) that auto-detection runs at startup.
