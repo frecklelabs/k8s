@@ -24,6 +24,14 @@ rules:
     verbs:
       - get
   - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+  - apiGroups:
       - "resource.k8s.io"
     resources:
       - resourceslices
@@ -111,9 +119,14 @@ spec:
       - name: dranet
         args:
         - /dranet
+        # Kept at 4 for now: the per-scan "Found N devices" line is V(4), and
+        # it's how the rescan cadence per node is compared (C-2918).
         - --v=4
         - --hostname-override=$(NODE_NAME)
-        image: registry.k8s.io/networking/dranet:stable
+        # Bare metal: skip the cloud metadata probes (GCE, AWS, Azure, OKE,
+        # Alibaba, CKS) that auto-detection runs at startup.
+        - --cloud-provider-hint=NONE
+        image: registry.k8s.io/networking/dranet:v1.5.0@sha256:7df83bed3e87e8ecc9ea2ef8ad8abecd7e29600ff7ed6fd72b07c84075c0202f
         env:
         - name: NODE_NAME
           valueFrom:
@@ -125,6 +138,12 @@ spec:
             memory: "50Mi"
         securityContext:
           privileged: true
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 9177
+          failureThreshold: 12
+          periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /healthz
