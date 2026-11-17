@@ -151,6 +151,23 @@ spec:
                     rate(node_network_receive_errs_total{device!="lo",service="vm-k8s-stack-prometheus-node-exporter"}[1m]) +
                     rate(node_network_transmit_errs_total{device!="lo",service="vm-k8s-stack-prometheus-node-exporter"}[1m])
                   ) >= 10
+          # cephFileSystems and cephObjectStores are chart lists, which Helm
+          # replaces rather than merges, so their CPU requests (see
+          # cephClusterSpec.resources below) are set on the rendered CRs.
+          - target:
+              kind: CephFilesystem
+              name: ceph-filesystem
+            patch: |
+              - op: replace
+                path: /spec/metadataServer/resources/requests/cpu
+                value: 200m
+          - target:
+              kind: CephObjectStore
+              name: ceph-objectstore
+            patch: |-
+              - op: replace
+                path: /spec/gateway/resources/requests/cpu
+                value: 150m
   values:
     monitoring:
       enabled: true
@@ -191,6 +208,44 @@ spec:
           - name: internal
             namespace: gateway-system
     cephClusterSpec:
+      # Explicit CPU requests (C-1558, C-2919). The chart defaults (OSD and
+      # mon 1 CPU each, mds and rgw 1 CPU, 100m per log collector) reserved
+      # ~23.5 CPU on atlantis and ~22.7 on fairy against well under 1 CPU of
+      # real use, which drove KubeCPUOvercommit. No CPU limits, so Ceph can
+      # still burst during recovery (the 2026-10-16 atlantis recovery peaked
+      # at 0.42 CPU for one OSD). Helm merges this map with the chart's, so
+      # memory keeps the chart defaults except where set here.
+      resources:
+        osd:
+          requests:
+            cpu: 500m
+        mon:
+          requests:
+            cpu: 200m
+        # rook-ceph-mgr-a was OOM-killed on both clusters in the 14 days to
+        # 2026-11-16, peaking at the chart's 1Gi limit, and its watch-active
+        # sidecar peaks at 90-117Mi against the chart's 100Mi limit.
+        mgr:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            memory: 2Gi
+        mgr-sidecar:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        crashcollector:
+          requests:
+            cpu: 10m
+        logcollector:
+          requests:
+            cpu: 10m
+        exporter:
+          requests:
+            cpu: 20m
       cephConfig:
         global:
           bdev_enable_discard: "true" # quote
