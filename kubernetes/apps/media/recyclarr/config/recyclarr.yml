@@ -212,15 +212,7 @@ radarr:
       type: movie
 
     quality_profiles:
-      - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
-        reset_unmatched_scores:
-          enabled: true
-        # Upgrades off while [Movies] Default is built (C-2911): this profile
-        # scores lossless audio -10000 and keeps replacing lossless files.
-        upgrade:
-          allowed: false
-
-      # [Movies] Default (C-2911): the profile every movie moves to. A variant
+      # [Movies] Default (C-2911): the profile every movie uses. A variant
       # of TRaSH's UHD Bluray + WEB profile, for its language setting
       # (Original); every custom format score is set below, none inherited.
       # Recyclarr here keeps no state, so it creates this profile on its first
@@ -265,28 +257,6 @@ radarr:
             qualities: [Bluray-1080p, WEBDL-1080p, WEBRip-1080p]
 
     custom_formats:
-      - # HDR10+ Boost — Samsung S95F supports HDR10+
-        trash_ids:
-          - caa37d0df9c348912df1fb1d88f9273a  # HDR10+ Boost
-        assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
-
-      - # SDR (no WEBDL) — block SDR Remux/Bluray, allow SDR WEB for older movies
-        trash_ids:
-          - 25c12f78430a3a23413652cbd1d48d77  # SDR (no WEBDL)
-        assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
-
-      - # Unwanted
-        trash_ids:
-          - b6832f586342ef70d9c128d40c07b872  # Bad Dual Groups
-          - cc444569854e9de0b084ab2b8b1532b2  # Black and White Editions
-          - ae9b7c9ebde1f3bd336a8cbd1ec4c5e5  # No-RlsGroup
-          - 7357cf5161efbf8c4d5d0c30b4815ee2  # Obfuscated
-          - 5c44f52a8714fdd79bb4d98e2673be1f  # Retags
-        assign_scores_to:
-          - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
-
       # ---- [Movies] Default scores (C-2911). Every format the guide profile
       # or its default groups bring in is listed, so none keeps a guide score.
       - # Audio 1: TrueHD Atmos. The Silo app sends its height channels to the
