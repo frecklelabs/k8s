@@ -117,7 +117,6 @@ kubernetes/
 - **GitHub Actions Runners**: Self-hosted CI/CD runners
 - **IT Tools**: Collection of useful web tools
 - **Golink**: Internal URL shortener
-- **Netbox**: Infrastructure documentation
 - **Homebox**: Home inventory management
 - **Mealie**: Recipe and meal planning management
 
