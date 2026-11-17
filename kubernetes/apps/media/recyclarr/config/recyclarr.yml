@@ -206,6 +206,10 @@ radarr:
       - trash_id: 5128baeb2b081b72126bc8482b2a86a0  # [SQP] SQP-1 (2160p)
         reset_unmatched_scores:
           enabled: true
+        # Upgrades off while [Movies] Default is built (C-2911): this profile
+        # scores lossless audio -10000 and keeps replacing lossless files.
+        upgrade:
+          allowed: false
 
     custom_formats:
       - # HDR10+ Boost — Samsung S95F supports HDR10+
