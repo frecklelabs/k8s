@@ -24,3 +24,61 @@ spec:
   timeout: 30m
   prune: false
   wait: true
+  # C-1558: explicit Ceph CPU requests, atlantis first. The chart defaults
+  # (OSD and mon 1 CPU each, mds and rgw 1 CPU, 100m per log collector)
+  # reserved ~23.5 CPU here against well under 1 CPU of real use, which is
+  # most of the KubeCPUOvercommit. Requests only: no CPU limits, so Ceph
+  # can still burst during recovery (the 2026-10-16 recovery peaked at
+  # 0.42 CPU for one OSD). Memory keeps the chart defaults. Once atlantis
+  # has rolled clean, this moves into the shared HelmRelease for fairy too.
+  patches:
+    - target:
+        kind: HelmRelease
+        name: rook-ceph-cluster
+      patch: |-
+        - op: add
+          path: /spec/values/cephClusterSpec/resources
+          value:
+            osd:
+              requests:
+                cpu: 500m
+            mon:
+              requests:
+                cpu: 200m
+            mgr:
+              requests:
+                cpu: 200m
+            mgr-sidecar:
+              requests:
+                cpu: 10m
+            crashcollector:
+              requests:
+                cpu: 10m
+            logcollector:
+              requests:
+                cpu: 10m
+            exporter:
+              requests:
+                cpu: 20m
+        # cephFileSystems and cephObjectStores are chart lists, which Helm
+        # replaces rather than merges, so set their CPU on the rendered CRs.
+        - op: add
+          path: /spec/postRenderers/0/kustomize/patches/-
+          value:
+            target:
+              kind: CephFilesystem
+              name: ceph-filesystem
+            patch: |
+              - op: replace
+                path: /spec/metadataServer/resources/requests/cpu
+                value: 200m
+        - op: add
+          path: /spec/postRenderers/0/kustomize/patches/-
+          value:
+            target:
+              kind: CephObjectStore
+              name: ceph-objectstore
+            patch: |
+              - op: replace
+                path: /spec/gateway/resources/requests/cpu
+                value: 150m

@@ -22,3 +22,74 @@ spec:
   timeout: 15m
   prune: true
   wait: true
+  # C-1558: explicit CSI CPU requests, atlantis first. The Driver CRs still
+  # carry the requests Rook wrote when it created them (250m per plugin,
+  # 100m per sidecar), which this chart never rendered. Memory is restated
+  # at the live values so Helm owns the whole block.
+  patches:
+    - target:
+        kind: HelmRelease
+        name: rook-ceph-csi-drivers
+      patch: |-
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: rook-ceph-csi-drivers
+        spec:
+          values:
+            drivers:
+              rbd:
+                nodePlugin:
+                  resources:
+                    plugin:
+                      requests: {cpu: 50m, memory: 512Mi}
+                      limits: {memory: 1Gi}
+                    registrar:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                controllerPlugin:
+                  resources:
+                    plugin:
+                      requests: {cpu: 50m, memory: 512Mi}
+                      limits: {memory: 1Gi}
+                    omapGenerator:
+                      requests: {cpu: 10m, memory: 512Mi}
+                      limits: {memory: 1Gi}
+                    attacher:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    provisioner:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    resizer:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    snapshotter:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+              cephfs:
+                nodePlugin:
+                  resources:
+                    plugin:
+                      requests: {cpu: 50m, memory: 512Mi}
+                      limits: {memory: 1Gi}
+                    registrar:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                controllerPlugin:
+                  resources:
+                    plugin:
+                      requests: {cpu: 50m, memory: 512Mi}
+                      limits: {memory: 1Gi}
+                    attacher:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    provisioner:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    resizer:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
+                    snapshotter:
+                      requests: {cpu: 10m, memory: 128Mi}
+                      limits: {memory: 256Mi}
