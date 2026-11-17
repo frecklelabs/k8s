@@ -72,6 +72,15 @@ spec:
           path: /spec/values/service/transfer-port/annotations
           value:
             lbipam.cilium.io/ips: 10.189.250.30
+        # Reel works far harder than the base sizing (C-2915): p95 about 3Gi,
+        # peaks up to about 8Gi. Request covers the steady state; the limit
+        # leaves room for peaks.
+        - op: replace
+          path: /spec/values/controllers/qbittorrent/containers/app/resources/requests/memory
+          value: 4Gi
+        - op: replace
+          path: /spec/values/controllers/qbittorrent/containers/app/resources/limits/memory
+          value: 16Gi
         # nodePort = transfer port: pod IPv6 egress leaves from the node's
         # public IPv6, so peers dial <node IPv6>:<port>; the NodePort maps it
         # to the pod (eTP Local, so only the pod's node answers). IPv4 still
