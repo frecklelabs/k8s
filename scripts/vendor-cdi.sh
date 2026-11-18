@@ -9,7 +9,10 @@
 # To re-vendor manually:   ./scripts/vendor-cdi.sh
 # To check without writing: ./scripts/vendor-cdi.sh --check
 #
-# Requires: yq (mikefarah), curl.
+# Run by Renovate (postUpgradeTasks in .renovaterc.json5) when TAG below is
+# bumped, so the vendored files land in the same PR as the pin.
+#
+# Requires: curl, and mise (runs the pinned yq below) or yq (mikefarah) on PATH.
 
 set -euo pipefail
 
@@ -28,18 +31,29 @@ MODE=${1:-vendor}
 case "${MODE}" in
   vendor|--check) ;;
   --help|-h)
-    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     exit 0 ;;
   *)
     echo "ERROR: unknown argument '${MODE}'. Use --check, --help, or no args." >&2
     exit 64 ;;
 esac
 
-command -v yq >/dev/null || { echo "ERROR: yq (mikefarah) required" >&2; exit 2; }
 command -v curl >/dev/null || { echo "ERROR: curl required" >&2; exit 2; }
 
 WORK=$(mktemp -d)
 trap 'rm -rf "${WORK}"' EXIT
+
+# The pinned yq through mise when mise is there, so every run formats the
+# vendored YAML the same way; the Renovate image has no yq, so its
+# postUpgradeTask installs mise. mise runs from ${WORK}, away from the repo's
+# mise.toml, which Renovate's checkout has not trusted.
+# renovate: datasource=github-releases depName=mikefarah/yq
+YQ_VERSION=v4.54.3
+if command -v mise >/dev/null; then
+  yq() { (cd "${WORK}" && mise exec "aqua:mikefarah/yq@${YQ_VERSION#v}" -- yq "$@"); }
+elif ! command -v yq >/dev/null; then
+  echo "ERROR: mise or yq (mikefarah) required" >&2; exit 2
+fi
 
 BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
@@ -87,6 +101,7 @@ resources:
   - ./cdi-cr.yaml
   # Ours, not upstream: claim property sets for CSI classes CDI can't infer.
   - ./storageprofiles.yaml
+  - ./monitoring.yaml
 EOF
 
 if [[ "${MODE}" == "--check" ]]; then

@@ -157,5 +157,35 @@
         executionMode: 'branch',
       },
     },
+    {
+      // Same for KubeVirt and CDI: their operator manifests, RBAC and CRDs
+      // are vendored whole from the release named by TAG in the vendor
+      // script, so a TAG bump alone changes nothing on the cluster. Re-run
+      // the script in the PR. The Renovate image has no yq, so install mise
+      // and the script runs its pinned yq through it. Both scripts need
+      // allowedCommands entries in the global Renovate config.
+      matchDepNames: ['kubevirt/kubevirt'],
+      postUpgradeTasks: {
+        installTools: {mise: {}},
+        commands: ['scripts/vendor-kubevirt.sh'],
+        fileFilters: [
+          'kubernetes/apps/kubevirt/operator/**',
+          'kubernetes/apps/kubevirt/cr/**',
+        ],
+        executionMode: 'branch',
+      },
+    },
+    {
+      matchDepNames: ['kubevirt/containerized-data-importer'],
+      postUpgradeTasks: {
+        installTools: {mise: {}},
+        commands: ['scripts/vendor-cdi.sh'],
+        fileFilters: [
+          'kubernetes/apps/kubevirt/cdi-operator/**',
+          'kubernetes/apps/kubevirt/cdi-cr/**',
+        ],
+        executionMode: 'branch',
+      },
+    },
   ],
 }
