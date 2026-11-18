@@ -15,7 +15,7 @@
 set -euo pipefail
 
 # renovate: datasource=github-releases depName=kubevirt/kubevirt
-TAG=v1.9.1
+TAG=v1.10.0
 
 REPO=kubevirt/kubevirt
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
