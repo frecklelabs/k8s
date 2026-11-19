@@ -35,5 +35,6 @@ resources:
   - ./storyteller.yaml
   - ./readalong.yaml
   - ./floppy.yaml
+  - ./floppy-flow-logger.yaml
   - ./silo.yaml
   - ./silo-cutover.yaml
