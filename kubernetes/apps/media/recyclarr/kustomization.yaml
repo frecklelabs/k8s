@@ -17,5 +17,8 @@ configMapGenerator:
       - ./config/custom-formats/anime-bluray-encode.json
       - ./config/custom-formats/anime-non-english-dub.json
       - ./config/custom-formats/anime-web-2160p.json
+  - name: recyclarr-custom-formats-radarr
+    files:
+      - ./config/custom-formats-radarr/remux.json
 generatorOptions:
   disableNameSuffixHash: true

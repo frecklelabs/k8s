@@ -101,5 +101,12 @@ spec:
           - path: /config/custom-formats/anime-web-2160p.json
             subPath: anime-web-2160p.json
             readOnly: true
+      custom-formats-radarr:
+        type: configMap
+        name: recyclarr-custom-formats-radarr
+        globalMounts:
+          - path: /config/custom-formats-radarr/remux.json
+            subPath: remux.json
+            readOnly: true
       tmp:
         type: emptyDir
