@@ -34,8 +34,6 @@ spec:
                 value: "4"
               - name: TUWUNEL_DATABASE_PATH
                 value: "/data/db"
-              - name: TUWUNEL_DATABASE_BACKEND
-                value: "rocksdb"
               - name: TUWUNEL_ADDRESS
                 value: "0.0.0.0"
               - name: TUWUNEL_PORT
@@ -56,6 +54,21 @@ spec:
                 value: "104857600"
               - name: TUWUNEL_IP_LOOKUP_STRATEGY
                 value: "5"
+              # v2 throttles password attempts per client address, taken from
+              # the TCP peer unless a source is named. The peer is an envoy pod,
+              # so without this every client shares one bucket. The public
+              # gateway is reached directly (DNS-only, externalTrafficPolicy
+              # Local) and envoy appends the peer it saw, so the rightmost XFF
+              # entry is the real client and can't be forged by it.
+              - name: TUWUNEL_HTTP__IP_SOURCE
+                value: rightmost_x_forwarded_for
+              # In-cluster bridges (heisenbridge, hookshot) call the Service
+              # directly and send no XFF; a configured source answers those
+              # requests 500 unless the peer is trusted. Trusting the pod
+              # subnets keeps them working; the password throttle ignores this
+              # list and still uses the rightmost XFF for envoy's traffic.
+              - name: TUWUNEL_HTTP__IP_SOURCE_TRUSTED_SUBNETS
+                value: '["10.244.0.0/16", "fd2b:ec21:3ff2::/48"]'
               # SSO / next-gen OIDC auth via pocket-id (freckle.id). tuwunel is
               # the OIDC relying party: it redirects login to freckle.id and maps
               # the returned identity to a Matrix account. Setting well_known.client
