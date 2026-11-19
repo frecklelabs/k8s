@@ -258,8 +258,9 @@ spec:
         prometheusEndpoint: http://vmsingle-vm.observability.svc.cluster.local:8429
       mgr:
         modules:
+          # Rule out an unused module while measuring active mgr memory growth.
           - name: insights
-            enabled: true
+            enabled: false
           - name: pg_autoscaler
             enabled: true
           - name: rook
