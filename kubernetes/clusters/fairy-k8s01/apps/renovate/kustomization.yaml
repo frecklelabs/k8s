@@ -12,3 +12,4 @@ configMapGenerator:
     files:
       - ./config/config.json5
       - ./config/run.mjs
+      - ./config/npm-lockfile-registry.mjs
