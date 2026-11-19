@@ -62,7 +62,7 @@ async function github(method, path) {
 // Renovate hands child processes (go mod tidy, npm and uv locks) only a
 // fixed set of env plus customEnvVariables, so pass the package-proxy
 // settings from cronjob.yaml along explicitly.
-const PROXY_ENV = ['GOPROXY', 'GOSUMDB', 'GOPRIVATE', 'NPM_CONFIG_REGISTRY', 'PIP_INDEX_URL', 'UV_INDEX_URL'];
+const PROXY_ENV = ['GOPROXY', 'GOSUMDB', 'GOPRIVATE', 'NPM_CONFIG_REGISTRY', 'PIP_INDEX_URL', 'PIP_TRUSTED_HOST', 'UV_INDEX_URL'];
 const proxyEnv = Object.fromEntries(PROXY_ENV.filter((k) => env[k]).map((k) => [k, env[k]]));
 
 let inst, token;
