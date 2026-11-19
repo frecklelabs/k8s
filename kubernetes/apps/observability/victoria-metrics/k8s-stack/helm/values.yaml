@@ -439,6 +439,15 @@ kubeScheduler:
             # caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             # don't check cert since talos isn't using the k8s CA for this
             insecureSkipVerify: true
+        # Effective pod requests (including native sidecars and init maxima) are
+        # exposed separately from the scheduler's process metrics.
+        - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+          port: http-metrics
+          path: /metrics/resources
+          honorLabels: true
+          scheme: https
+          tlsConfig:
+            insecureSkipVerify: true
 
 kubeProxy:
   enabled: false
