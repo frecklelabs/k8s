@@ -4,8 +4,6 @@ kind: HelmRelease
 metadata:
   name: windmill
 spec:
-  # Held for the pg-18a database handoff; a separate activation change removes this.
-  suspend: true
   interval: 1h
   chart:
     spec:
