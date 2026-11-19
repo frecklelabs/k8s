@@ -17,7 +17,7 @@
     // Defines the custom.talos-factory datasource, which lists the Talos
     // versions the Image Factory can actually build. Must come before
     // infraPackages so our per-cluster commit rules still take precedence.
-    'github>home-operations/renovate-presets//apps/talosFactory.json5#11.0.0',
+    'github>home-operations/renovate-presets//apps/talosFactory.json5#12.0.0',
     'github>frecklelabs/k8s//.renovate/infraPackages.json5',
   ],
   // The merge queue tests each PR against the latest main before merging, so
