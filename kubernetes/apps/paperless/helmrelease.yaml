@@ -107,6 +107,7 @@ spec:
             envFrom:
               - secretRef:
                   name: paperless-secrets
+            # Django validates Host; kubelet otherwise sends the pod address.
             probes:
               startup:
                 enabled: true
@@ -115,6 +116,9 @@ spec:
                   httpGet:
                     path: /api/
                     port: 8000
+                    httpHeaders:
+                      - name: Host
+                        value: paperless.${CLUSTER_SUBDOMAIN}.freckle.tools
                   failureThreshold: 60
                   periodSeconds: 10
               liveness:
@@ -124,6 +128,9 @@ spec:
                   httpGet:
                     path: /api/
                     port: 8000
+                    httpHeaders:
+                      - name: Host
+                        value: paperless.${CLUSTER_SUBDOMAIN}.freckle.tools
                   periodSeconds: 30
               readiness:
                 enabled: true
@@ -132,6 +139,9 @@ spec:
                   httpGet:
                     path: /api/
                     port: 8000
+                    httpHeaders:
+                      - name: Host
+                        value: paperless.${CLUSTER_SUBDOMAIN}.freckle.tools
                   periodSeconds: 10
             securityContext:
               allowPrivilegeEscalation: false
