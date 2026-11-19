@@ -43,6 +43,20 @@ vmsingle:
 
 defaultRules:
   rules:
+    # Scheduler requests include overlapping native sidecars, sequential init
+    # maxima and pod overhead. Deduplicate scheduler replicas before phase joins.
+    namespace_cpu:kube_pod_container_resource_requests:sum:
+      spec:
+        expr: |-
+          sum by (cluster, namespace) (
+            max by (cluster, namespace, pod) (
+              kube_pod_resource_request{job="kube-scheduler",resource="cpu",unit="cores"}
+            )
+            * on (cluster, namespace, pod)
+              max by (cluster, namespace, pod) (
+                kube_pod_status_phase{job="kube-state-metrics",phase=~"Pending|Running"} == 1
+              )
+          )
     # These expressions discard cluster or synthesize a series with absent()/vector().
     # Label only their alerts: vmalert externalLabels also rewrites historical
     # recording results and can collapse distinct series onto the same labelset.
