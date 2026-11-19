@@ -113,7 +113,7 @@ spec:
           - name: vllm
             # Upstream vLLM 0.32.0 (multi-arch index digest; see header for the
             # v0.24.0 history). Loads from the local NVMe cache.
-            image: mirror.gcr.io/vllm/vllm-openai:v0.33.0@sha256:d825baf9ce4b1b6bfc5ecc7b79880c7e6748c65a72d697ce3d47607aafa84c6e
+            image: mirror.gcr.io/vllm/vllm-openai:v0.34.0@sha256:20fdb089454afbb324efa4110a2c025ff7b27cc1a086e07aa580b18df8ad1ce1
             command:
               - bash
               - -c
@@ -298,7 +298,7 @@ spec:
         containers:
           - name: vllm
             # Same image as the leader. Digest-pinned.
-            image: mirror.gcr.io/vllm/vllm-openai:v0.33.0@sha256:d825baf9ce4b1b6bfc5ecc7b79880c7e6748c65a72d697ce3d47607aafa84c6e
+            image: mirror.gcr.io/vllm/vllm-openai:v0.34.0@sha256:20fdb089454afbb324efa4110a2c025ff7b27cc1a086e07aa580b18df8ad1ce1
             command:
               - bash
               - -c
