@@ -47,9 +47,11 @@
   // Commit through the GitHub API, so commits are signed as the App.
   platformCommit: 'enabled',
   // Commands repos may run as postUpgradeTasks (anchored regexes).
-  // frecklelabs/k8s re-vendors the gateway-api CRDs after a tag bump.
+  // frecklelabs/k8s re-vendors the gateway-api CRDs after a tag bump; the
+  // npm rule below normalizes lockfile URLs.
   allowedCommands: [
     '^scripts/vendor-gateway-api-crds\\.sh$',
+    '^node /config/npm-lockfile-registry\\.mjs$',
   ],
   // npm and PyPI lookups through the cluster's package proxy (Go lookups
   // follow GOPROXY from cronjob.yaml). The npmrc also drives npm lockfile
@@ -59,6 +61,17 @@
     {
       matchDatasources: ['pypi'],
       registryUrls: ['http://package-proxy.dev-platform.svc.cluster.local:8080/pypi/simple/'],
+    },
+    {
+      // npm records the proxy's in-cluster tarball URLs in package-lock.json,
+      // which CI can't fetch (C-3229). Rewrite them to registry.npmjs.org.
+      // Per update, not per branch, so a group led by another manager runs it
+      // too; the script is idempotent.
+      matchManagers: ['npm'],
+      postUpgradeTasks: {
+        commands: ['node /config/npm-lockfile-registry.mjs'],
+        fileFilters: ['**/package-lock.json', '**/npm-shrinkwrap.json'],
+      },
     },
   ],
   binarySource: 'install',
