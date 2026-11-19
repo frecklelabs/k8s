@@ -37,6 +37,8 @@ spec:
             runAsUser: 1000
             runAsGroup: 1000
             fsGroup: 1000
+            # Avoid walking the growing backup tree on every scheduled copy.
+            fsGroupChangePolicy: OnRootMismatch
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
