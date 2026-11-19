@@ -7,6 +7,15 @@ metadata:
   namespace: &namespace janet-mcp
 spec:
   targetNamespace: *namespace
+  # C-781: park for the 72-hour consumer observation window; remove to roll back.
+  patches:
+    - target:
+        group: apps
+        kind: Deployment
+      patch: |
+        - op: replace
+          path: /spec/replicas
+          value: 0
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
