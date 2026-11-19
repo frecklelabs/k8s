@@ -62,6 +62,19 @@
       enabled: false,
     },
     {
+      // The KubeVirt and CDI operator manifests are vendored whole from an
+      // upstream release (scripts/vendor-kubevirt.sh, scripts/vendor-cdi.sh).
+      // A bump of the image line alone leaves the operator's version env,
+      // RBAC and CRDs at the old release, so it is versioned only through
+      // the TAG in those scripts (the github-releases dep) and a re-vendor.
+      matchFileNames: [
+        'kubernetes/apps/kubevirt/operator/**',
+        'kubernetes/apps/kubevirt/cdi-operator/**',
+      ],
+      matchDatasources: ['docker'],
+      enabled: false,
+    },
+    {
       // Renovate PRs are the infra agent's to handle (cockpit C-194), so
       // nobody is requested by default. The one exception is GitHub Actions
       // updates under .github/, which need Nicole's review anyway: ask her
