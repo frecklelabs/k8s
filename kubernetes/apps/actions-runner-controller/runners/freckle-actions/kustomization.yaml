@@ -6,6 +6,7 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./networkpolicy.yaml
+  - ./priorityclass.yaml
 configMapGenerator:
   - name: freckle-actions-buildkit
     files:
