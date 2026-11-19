@@ -28,6 +28,7 @@ spec:
   path: ./kubernetes/apps/media/qui
   components:
     - ../../../components/volsync-rsync-tls
+    - ./anime-search
   interval: 2m
   retryInterval: 1m
   timeout: 5m
@@ -42,6 +43,13 @@ spec:
       # qui's id for this cluster's qbt-reel (the seeded-search CronJob).
       QUI_REEL_INSTANCE_ID: "1"
       QUI_SEEDED_SEARCH_DAYS: "5,20"
+      # Every torznab indexer except the anime-only one (10), which only the
+      # anime run below searches. Add new indexers here.
+      QUI_SEEDED_SEARCH_INDEXER_IDS: "2,5,6,7,8,9"
+      # Anime run (tv-anime only, indexer 10): three days after each main
+      # run, which takes about a day for ~1,200 torrents at 60 s.
+      QUI_ANIME_SEARCH_DAYS: "8,23"
+      QUI_ANIME_SEARCH_INDEXER_IDS: "10"
       MEDIA_PVC: store01-vault01-media
   patches:
     - target:

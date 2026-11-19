@@ -1,0 +1,8 @@
+---
+# yaml-language-server: $schema=https://www.schemastore.org/kustomization.json
+# Opt-in for clusters with an anime-only indexer: the pointer lists it in
+# components and sets QUI_ANIME_SEARCH_DAYS and QUI_ANIME_SEARCH_INDEXER_IDS.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./cronjob.yaml
