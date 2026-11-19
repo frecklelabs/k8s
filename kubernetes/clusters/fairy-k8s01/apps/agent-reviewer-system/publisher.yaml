@@ -105,7 +105,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: publisher
-          image: ghcr.io/frecklelabs/agent-platform/cockpit:main-20261118T025551Z-6ef2be6@sha256:3d15c56d5d746a24f8c426b065a5707c1dd92b2f87ad24bbcf985c265de6f4da
+          image: ghcr.io/frecklelabs/agent-platform/cockpit:main-20261118T231750Z-0794098@sha256:ebf6bbd6b888f1de615064d957f2f62208caa3fb5ddfe3b13494272c78cc00ef
           args: ["reviewer-publisher"]
           env:
             - name: REVIEWER_PUBLISHER_MODE
