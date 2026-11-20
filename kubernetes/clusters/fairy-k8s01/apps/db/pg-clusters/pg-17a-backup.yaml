@@ -1,0 +1,15 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: pg-17a-backup
+spec:
+  # Retain the owner of existing Backup records after cluster retirement.
+  suspend: true
+  schedule: "0 0 */6 * * *"
+  immediate: true
+  backupOwnerReference: self
+  cluster:
+    name: pg-17a
+  target: prefer-standby
+  method: barmanObjectStore
