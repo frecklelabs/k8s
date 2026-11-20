@@ -1,0 +1,39 @@
+---
+# Opt in on one app pointer at a time, after measuring active transfers.
+# Keep this separate from volsync-rsync-tls so adding the reusable settings
+# does not change movers for every consumer at once.
+# VOLSYNC_MEMORY_REQUEST and VOLSYNC_MEMORY_LIMIT can override these values.
+# Patches select by kind because names are substituted after Kustomize runs.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      group: volsync.backube
+      kind: ReplicationSource
+    patch: |-
+      apiVersion: volsync.backube/v1alpha1
+      kind: ReplicationSource
+      metadata:
+        name: unused
+      spec:
+        rsyncTLS:
+          moverResources:
+            requests:
+              memory: ${VOLSYNC_MEMORY_REQUEST:=64Mi}
+            limits:
+              memory: ${VOLSYNC_MEMORY_LIMIT:=1Gi}
+  - target:
+      group: volsync.backube
+      kind: ReplicationDestination
+    patch: |-
+      apiVersion: volsync.backube/v1alpha1
+      kind: ReplicationDestination
+      metadata:
+        name: unused
+      spec:
+        rsyncTLS:
+          moverResources:
+            requests:
+              memory: ${VOLSYNC_MEMORY_REQUEST:=64Mi}
+            limits:
+              memory: ${VOLSYNC_MEMORY_LIMIT:=1Gi}
