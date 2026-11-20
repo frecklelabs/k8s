@@ -1,0 +1,130 @@
+---
+{
+  "apiVersion": "v1",
+  "kind": "PersistentVolumeClaim",
+  "metadata": {
+    "name": "mealie-file-check-c1931-01",
+    "annotations": {
+      "kustomize.toolkit.fluxcd.io/prune": "disabled"
+    }
+  },
+  "spec": {
+    "accessModes": [
+      "ReadWriteOnce"
+    ],
+    "storageClassName": "ceph-block",
+    "resources": {
+      "requests": {
+        "storage": "15Gi"
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "mealie-file-check-c1931-01",
+    "annotations": {
+      "kustomize.toolkit.fluxcd.io/prune": "disabled"
+    }
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 600,
+    "template": {
+      "spec": {
+        "restartPolicy": "Never",
+        "automountServiceAccountToken": false,
+        "securityContext": {
+          "runAsUser": 911,
+          "runAsGroup": 911,
+          "runAsNonRoot": true,
+          "fsGroup": 911,
+          "fsGroupChangePolicy": "OnRootMismatch",
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "affinity": {
+          "podAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": [
+              {
+                "labelSelector": {
+                  "matchLabels": {
+                    "app.kubernetes.io/name": "dst-mealie-config",
+                    "app.kubernetes.io/part-of": "volsync"
+                  }
+                },
+                "topologyKey": "kubernetes.io/hostname"
+              }
+            ]
+          }
+        },
+        "containers": [
+          {
+            "name": "verify",
+            "image": "ghcr.io/mealie-recipes/mealie:v3.29.0@sha256:78eb28b8776d0bad40c5e605c72b3f4f5976793e491558c7dcbdfc04c835d4bc",
+            "command": [
+              "python3",
+              "-I",
+              "-B",
+              "-c"
+            ],
+            "args": [
+              "\"\"\"Retained scratch copy check; no application startup or database access.\"\"\"\nimport collections\nimport hashlib\nimport json\nimport os\nfrom pathlib import Path\nimport shutil\nimport stat\nimport sys\n\n\ndef inventory(root):\n    entries, stability = {}, {}\n    owners = collections.Counter()\n\n    def walk(directory):\n        for path in sorted(directory.iterdir()):\n            if directory == root and path.name in ('.zfs', 'lost+found'):\n                continue\n            info = path.lstat()\n            key = str(path.relative_to(root))\n            mode = stat.S_IMODE(info.st_mode)\n            owners[(info.st_uid, info.st_gid)] += 1\n            stability[key] = (info.st_dev, info.st_ino, info.st_size,\n                              info.st_mtime_ns, info.st_ctime_ns, info.st_nlink)\n            if stat.S_ISLNK(info.st_mode):\n                entries[key] = ('link', mode, os.readlink(path))\n            elif stat.S_ISDIR(info.st_mode):\n                entries[key] = ('directory', mode)\n                walk(path)\n            elif stat.S_ISREG(info.st_mode):\n                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)\n                with os.fdopen(fd, 'rb') as stream:\n                    opened = os.fstat(stream.fileno())\n                    if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):\n                        raise RuntimeError()\n                    digest = hashlib.file_digest(stream, 'sha256').hexdigest()\n                entries[key] = ('file', mode, info.st_size, digest)\n            else:\n                raise RuntimeError()\n    walk(root)\n    return entries, stability, owners\n\n\ndef verify(source, scratch, expected_owner=(911, 911)):\n    target = scratch / 'recovery'\n    if os.path.lexists(target) or os.path.lexists(scratch / 'verification.json'):\n        raise RuntimeError()\n    before, stable_before, source_owners = inventory(source)\n    files = [entry for entry in before.values() if entry[0] == 'file']\n    if not files:\n        raise RuntimeError()\n\n    def ignore(directory, names):\n        return set(names) & {'.zfs', 'lost+found'} if Path(directory) == source else set()\n\n    shutil.copytree(source, target, symlinks=True, ignore=ignore)\n    restored, _, restored_owners = inventory(target)\n    after, stable_after, after_owners = inventory(source)\n    if (before != after or stable_before != stable_after or source_owners != after_owners\n            or before != restored or set(restored_owners) != {expected_owner}):\n        raise RuntimeError()\n    root_info = target.lstat()\n    if (root_info.st_uid, root_info.st_gid) != expected_owner:\n        raise RuntimeError()\n    report = {\n        'result': 'PASSED', 'files': len(files), 'bytes': sum(e[2] for e in files),\n        'directories': sum(e[0] == 'directory' for e in before.values()),\n        'links': sum(e[0] == 'link' for e in before.values()),\n        'backup_stable': True, 'tree_hash_size_mode_link_equal': True,\n        'backup_owners': {f'{u}:{g}': n for (u, g), n in sorted(source_owners.items())},\n        'restored_owners': {f'{u}:{g}': n for (u, g), n in sorted(restored_owners.items())},\n    }\n    with (scratch / 'verification.json').open('x') as stream:\n        json.dump(report, stream, sort_keys=True)\n    return report\n\n\nif __name__ == '__main__':\n    try:\n        result = verify(Path(sys.argv[1]), Path(sys.argv[2]))\n        print(json.dumps(result, sort_keys=True), flush=True)\n    except BaseException:\n        print('{\"result\":\"FAILED\"}', flush=True)\n        sys.exit(1)\n",
+              "/backup",
+              "/restore"
+            ],
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "readOnlyRootFilesystem": true,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "128Mi"
+              },
+              "limits": {
+                "memory": "256Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "backup",
+                "mountPath": "/backup",
+                "readOnly": true
+              },
+              {
+                "name": "scratch",
+                "mountPath": "/restore"
+              }
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "backup",
+            "persistentVolumeClaim": {
+              "claimName": "mealie-config-backup",
+              "readOnly": true
+            }
+          },
+          {
+            "name": "scratch",
+            "persistentVolumeClaim": {
+              "claimName": "mealie-file-check-c1931-01"
+            }
+          }
+        ]
+      }
+    },
+    "suspend": true
+  }
+}
