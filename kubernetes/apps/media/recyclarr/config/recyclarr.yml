@@ -221,10 +221,14 @@ radarr:
       # sync and adopts it by name on every later one.
       #
       # Radarr ranks quality before custom-format score:
-      # - Remuxes rank on top but are disabled: the remuxes we have are past
-      #   the cutoff and never replaced, and no new ones are grabbed.
-      # - Blu-ray, WEB-DL and WEBRip 2160p are one group (the target and the
-      #   cutoff), so audio and HDR decide between them, not the source.
+      # - Remux-2160p, Blu-ray, WEB-DL and WEBRip 2160p are one group (the
+      #   target and the cutoff), so audio, HDR and the Remux bonus decide
+      #   between them, not the source (C-3257). As a separate quality above
+      #   the cutoff, a remux could never replace a 4K file, even a lossy
+      #   one: Radarr rejects a higher quality once the quality cutoff is met,
+      #   before it looks at scores.
+      # - Remux-1080p ranks on top but is disabled: the few 1080p remuxes we
+      #   have are past the cutoff and never replaced, and none are grabbed.
       # - 1080p is a fallback below it: a movie with no 4K release gets the
       #   best 1080p and moves to 2160p when one appears.
       # - 720p and lower stay off; Recyclarr adds unlisted qualities disabled.
@@ -241,6 +245,11 @@ radarr:
         # An upgrade needs +3000: every audio step except lossless <-> DD+
         # Atmos (1500 apart, at most 2600 with video) clears it in every case,
         # and no video or tier difference alone does.
+        # A remux adds 2400 (bounds table in the PR that added it, C-3257):
+        # with HDR on both sides, no encode replaces a lossless or TrueHD
+        # Atmos remux, and a remux replaces an encode only with better audio.
+        # SDR-scored encodes can also take a same-audio HDR remux when the
+        # video-score gain is at least 600 (2400 + 600 meets the +3000 step).
         min_upgrade_format_score: 3000
         upgrade:
           allowed: true
@@ -249,12 +258,10 @@ radarr:
           # upgrade is possible anyway (the +3000 step above).
           until_score: 11100
         qualities:
-          - name: Remux-2160p
-            enabled: false
           - name: Remux-1080p
             enabled: false
           - name: Movies 2160p
-            qualities: [Bluray-2160p, WEBDL-2160p, WEBRip-2160p]
+            qualities: [Remux-2160p, Bluray-2160p, WEBDL-2160p, WEBRip-2160p]
           - name: Movies 1080p
             qualities: [Bluray-1080p, WEBDL-1080p, WEBRip-1080p]
 
@@ -316,6 +323,13 @@ radarr:
         assign_scores_to:
           - name: "[Movies] Default"
             score: 100
+      - # Remux (local, recyclarr-custom-formats-radarr): any remux, on top
+        # of its audio and video scores.
+        trash_ids:
+          - 41075226e09569ef80d8687cc7039b57  # Remux
+        assign_scores_to:
+          - name: "[Movies] Default"
+            score: 2400
       - # Release-group tiers: a tie-break between releases with the same
         # audio. Bluray tiers apply to Blu-ray encodes, WEB tiers to WEB.
         trash_ids:
@@ -370,7 +384,7 @@ radarr:
         assign_scores_to:
           - name: "[Movies] Default"
             score: 0
-      - # Blocked. -100000, so no stack of bonuses (at most 11600) lifts a
+      - # Blocked. -100000, so no stack of bonuses (at most 14000) lifts a
         # blocked release above the minimum score of 0. hallowed and
         # BHDStudio made most of SQP-1's lossy replacements; the rest is
         # TRaSH's unwanted set.

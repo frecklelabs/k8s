@@ -2,9 +2,16 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/recyclarr/recyclarr/refs/tags/v8.0.0/schemas/settings-schema.json
 # Shared by both clusters (atlantis replaces only recyclarr.yml).
 resource_providers:
-  # Our own Sonarr custom formats, next to the guide's (the anime profiles
-  # use them). Mounted from the recyclarr-custom-formats ConfigMap.
+  # Our own custom formats, next to the guide's. Sonarr's (the anime
+  # profiles use them) are mounted from the recyclarr-custom-formats
+  # ConfigMap, Radarr's ([Movies] Default's Remux) from
+  # recyclarr-custom-formats-radarr. A provider serves one service, so each
+  # has its own directory.
   - name: frecklelabs-sonarr
     type: custom-formats
     path: /config/custom-formats
     service: sonarr
+  - name: frecklelabs-radarr
+    type: custom-formats
+    path: /config/custom-formats-radarr
+    service: radarr
