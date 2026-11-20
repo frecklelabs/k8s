@@ -1,8 +1,8 @@
 ---
 # Keep an off-cluster copy without propagating retention deletes or replacing
 # existing objects. NAS snapshot retention and any later cleanup are separate.
-# After rebuilding, copy this PVC's contents back to the backup bucket and
-# recover CNPG from serverName janet-db-v1.
+# Restore by assembling immutable data/WAL with finalized-metadata-v1 metadata
+# in a fresh recovery bucket. The original catalog may contain STARTED entries.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -45,23 +45,12 @@ spec:
           containers:
             - name: rclone
               image: rclone/rclone:1.76.0
-              command: [/bin/sh, -ec]
-              args:
-                - |
-                  rclone copy "rgw:$BUCKET_NAME" /mirror \
-                    --immutable --fast-list --transfers=8 \
-                    --stats-one-line --stats=0 --log-level=INFO
-                  # Inspect filenames on the mounted destination, never backup contents.
-                  rclone lsf /mirror --recursive --files-only > /tmp/mirror-files
-                  awk '
-                    /\/base\// { base++; if (base <= 3) print "NAS base: " $0 }
-                    /\/wals\// { wal++; if (wal <= 3) print "NAS WAL: " $0 }
-                    END {
-                      printf "NAS inventory: base=%d WAL=%d files\n", base, wal
-                      if (base == 0 || wal == 0) exit 1
-                    }
-                  ' /tmp/mirror-files
+              command: [/bin/sh, /scripts/bucket-mirror.sh]
               env:
+                - name: MIRROR_ROOT
+                  value: /mirror
+                - name: SERVER_NAME
+                  value: janet-db-v1
                 - name: RCLONE_CONFIG_RGW_TYPE
                   value: s3
                 - name: RCLONE_CONFIG_RGW_PROVIDER
@@ -100,11 +89,17 @@ spec:
                 limits:
                   memory: 512Mi
               volumeMounts:
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
                 - name: mirror
                   mountPath: /mirror
                 - name: tmp
                   mountPath: /tmp
           volumes:
+            - name: script
+              configMap:
+                name: janet-db-bucket-mirror-script
             - name: mirror
               persistentVolumeClaim:
                 claimName: janet-db-bucket-mirror

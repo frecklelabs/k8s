@@ -10,3 +10,7 @@ resources:
   - ./objectstore.yaml
   - ./cluster.yaml
   - ./database.yaml
+configMapGenerator:
+  - name: janet-db-bucket-mirror-script
+    files:
+      - bucket-mirror.sh
