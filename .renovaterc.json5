@@ -52,6 +52,19 @@
   },
   packageRules: [
     {
+      // Fixed export and archive-verification Jobs belong to an approved recovery
+      // point. Image bumps change immutable pod templates; review client-image
+      // changes with the recovery plan rather than recreating these Jobs.
+      matchDatasources: ['docker'],
+      matchPackageNames: ['ghcr.io/cloudnative-pg/postgresql'],
+      matchFileNames: [
+        'kubernetes/apps/media/silo/db-export/export.yaml',
+        'kubernetes/apps/media/silo/cutover/db/export.yaml',
+        'kubernetes/apps/media/silo/db-verify-export2/verify.yaml',
+      ],
+      enabled: false,
+    },
+    {
       // CRD minor and major upgrades need a Cilium and Envoy Gateway
       // compatibility review before merging.
       matchDepNames: ['kubernetes-sigs/gateway-api'],
