@@ -42,7 +42,8 @@ spec:
     - name: rook-ceph-operator
       namespace: rook-ceph
   # A Talos upgrade reboots one node at a time: its OSDs and mon drop out and
-  # PGs go degraded/undersized for 5-10 min, then recover. Hold the Ceph
+  # PGs go degraded/undersized for 5-10 min, then recover. Rook OSD rollouts
+  # also briefly cross the OSD-down ratio threshold. Hold the Ceph
   # alerts that every reboot trips for 30m (same reasoning as the node rules
   # in the k8s-stack values), so only a stuck host pages. Each `test` pins the
   # rule name at that index: if a chart bump reorders the rules the render
@@ -65,6 +66,12 @@ spec:
                 value: CephMonDown
               - op: replace
                 path: /spec/groups/1/rules/1/for
+                value: 30m
+              - op: test
+                path: /spec/groups/2/rules/0/alert
+                value: CephOSDDownHigh
+              - op: add
+                path: /spec/groups/2/rules/0/for
                 value: 30m
               - op: test
                 path: /spec/groups/2/rules/1/alert
