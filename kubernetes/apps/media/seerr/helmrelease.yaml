@@ -48,7 +48,7 @@ spec:
                 spec:
                   httpGet:
                     # Keep health checks independent of GitHub version checks.
-                    path: /api/v1/
+                    path: /api/v1/status?checkUpdateAvailable=false
                     port: *port
                   initialDelaySeconds: 0
                   periodSeconds: 10
