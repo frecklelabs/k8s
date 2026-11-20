@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/gateway.envoyproxy.io/backendtrafficpolicy_v1alpha1.json
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: flash-next-connect-retry
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: local-models
+      sectionName: flash-next
+  retry:
+    numRetries: 2
+    # These failures precede processing; retrying a status code or a general
+    # reset could duplicate a completion that the model already started.
+    retryOn:
+      triggers:
+        - connect-failure
+        - refused-stream
+        - reset-before-request
+  timeout:
+    tcp:
+      # Bound connection setup only. A short perRetry.timeout would also
+      # cut off successful requests while the model is generating a response.
+      connectTimeout: 1s
