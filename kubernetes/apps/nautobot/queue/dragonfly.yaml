@@ -27,6 +27,7 @@ spec:
     # OVERWRITES the previous one, keeping exactly one file. The default
     # `dump-{timestamp}` never prunes and eventually fills the PVC.
     - --dbfilename=dump
+    - --default_lua_flags=allow-undeclared-keys
   resources:
     requests:
       cpu: 100m
