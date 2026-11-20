@@ -28,6 +28,7 @@ spec:
   path: ./kubernetes/apps/media/jellyfin
   components:
     - ../../../components/volsync-rsync-tls
+    - ../../../components/volsync-rsync-tls-memory
   interval: 2m
   retryInterval: 1m
   timeout: 5m
@@ -52,31 +53,3 @@ spec:
             globalMounts:
               - path: /store01/vault01
                 readOnly: true
-    # C-1621 stage 1: memory request/limit on both rsync-tls movers, trialled
-    # here before it moves into the shared component. 14d peaks: RSS under
-    # 170 MiB on any mover (atlantis jellyfin), working set to ~930 MiB but
-    # that excess is NFS/page cache the kernel reclaims under a limit.
-    # Targeted by kind only: patches run before postBuild substitution, so
-    # the component names are still unsubstituted here.
-    - target:
-        group: volsync.backube
-        kind: ReplicationSource
-      patch: |-
-        - op: add
-          path: /spec/rsyncTLS/moverResources
-          value:
-            requests:
-              memory: 64Mi
-            limits:
-              memory: 1Gi
-    - target:
-        group: volsync.backube
-        kind: ReplicationDestination
-      patch: |-
-        - op: add
-          path: /spec/rsyncTLS/moverResources
-          value:
-            requests:
-              memory: 64Mi
-            limits:
-              memory: 1Gi
