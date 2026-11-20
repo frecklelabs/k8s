@@ -170,12 +170,42 @@ spec:
                 import importlib.metadata as m
                 import os
                 from pathlib import Path
-                for package in ("vllm", "flashinfer-python", "triton", "nvidia-cutlass-dsl"):
-                    print("inference-cache-package", package, m.version(package), flush=True)
+                import json
+                import platform
+                expected = {'schema': 2,
+                 'image': 'mirror.gcr.io/vllm/vllm-openai:v0.34.0@sha256:20fdb089454afbb324efa4110a2c025ff7b27cc1a086e07aa580b18df8ad1ce1',
+                 'model_snapshot': 'fc694b54fb0174e0913e6adf86691ef85a4ead47',
+                 'architecture': 'aarch64',
+                 'sm': '121',
+                 'flags_sha256': '803d7305240e08800faf384804d0455bcdc3ffb7a446a4fd5a29491801bb9ace',
+                 'packages': {'vllm': '0.34.0',
+                              'instanttensor': '0.2.3',
+                              'flashinfer-python': '0.7.3',
+                              'triton': '3.8.0',
+                              'nvidia-cutlass-dsl': '4.8.0'}}
+                if platform.machine() != expected["architecture"]:
+                    raise RuntimeError("architecture changed: rotate the kernel cache key")
+                for package, version in expected["packages"].items():
+                    installed = m.version(package)
+                    print("inference-cache-package", package, installed, flush=True)
+                    if installed != version:
+                        raise RuntimeError("package changed: rotate the kernel cache key: " + package)
+                # This is the declared image; verify the resolved Pod imageID separately.
+                print("inference-cache-identity", json.dumps(expected, sort_keys=True), flush=True)
                 revision = Path("/models/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4/refs/main").read_text().strip()
-                if revision != "fc694b54fb0174e0913e6adf86691ef85a4ead47":
+                if revision != expected["model_snapshot"]:
                     raise RuntimeError("model revision changed: rotate the kernel cache key")
                 print("inference-cache-model-revision", revision, flush=True)
+                cache_root = Path("/root/.cache")
+                identity_file = cache_root / "inference-cache-identity.json"
+                if identity_file.exists():
+                    if json.loads(identity_file.read_text()) != expected:
+                        raise RuntimeError("persistent cache identity mismatch")
+                else:
+                    if any(cache_root.iterdir()):
+                        raise RuntimeError("unidentified files in new cache: investigate before reuse")
+                    with identity_file.open("x") as stream:
+                        json.dump(expected, stream, sort_keys=True)
                 for variable in ("VLLM_CACHE_ROOT", "TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "CUDA_CACHE_PATH"):
                     path = Path(os.environ[variable])
                     path.mkdir(parents=True, exist_ok=True)
@@ -303,7 +333,7 @@ spec:
           # Rotate the key when the image, model revision, architecture or flags change.
           - name: kernel-cache
             hostPath:
-              path: /var/local/inference-cache/cache-v1-12be8a4036296480e75adaf6
+              path: /var/local/inference-cache/cache-v2-67d1a3dd85321b6426a62d1e
               type: DirectoryOrCreate
           # Source: shared models PVC on CephFS (read-only; init copies out of it).
           - name: ceph-models
@@ -429,12 +459,42 @@ spec:
                 import importlib.metadata as m
                 import os
                 from pathlib import Path
-                for package in ("vllm", "flashinfer-python", "triton", "nvidia-cutlass-dsl"):
-                    print("inference-cache-package", package, m.version(package), flush=True)
+                import json
+                import platform
+                expected = {'schema': 2,
+                 'image': 'mirror.gcr.io/vllm/vllm-openai:v0.34.0@sha256:20fdb089454afbb324efa4110a2c025ff7b27cc1a086e07aa580b18df8ad1ce1',
+                 'model_snapshot': 'fc694b54fb0174e0913e6adf86691ef85a4ead47',
+                 'architecture': 'aarch64',
+                 'sm': '121',
+                 'flags_sha256': '803d7305240e08800faf384804d0455bcdc3ffb7a446a4fd5a29491801bb9ace',
+                 'packages': {'vllm': '0.34.0',
+                              'instanttensor': '0.2.3',
+                              'flashinfer-python': '0.7.3',
+                              'triton': '3.8.0',
+                              'nvidia-cutlass-dsl': '4.8.0'}}
+                if platform.machine() != expected["architecture"]:
+                    raise RuntimeError("architecture changed: rotate the kernel cache key")
+                for package, version in expected["packages"].items():
+                    installed = m.version(package)
+                    print("inference-cache-package", package, installed, flush=True)
+                    if installed != version:
+                        raise RuntimeError("package changed: rotate the kernel cache key: " + package)
+                # This is the declared image; verify the resolved Pod imageID separately.
+                print("inference-cache-identity", json.dumps(expected, sort_keys=True), flush=True)
                 revision = Path("/models/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4/refs/main").read_text().strip()
-                if revision != "fc694b54fb0174e0913e6adf86691ef85a4ead47":
+                if revision != expected["model_snapshot"]:
                     raise RuntimeError("model revision changed: rotate the kernel cache key")
                 print("inference-cache-model-revision", revision, flush=True)
+                cache_root = Path("/root/.cache")
+                identity_file = cache_root / "inference-cache-identity.json"
+                if identity_file.exists():
+                    if json.loads(identity_file.read_text()) != expected:
+                        raise RuntimeError("persistent cache identity mismatch")
+                else:
+                    if any(cache_root.iterdir()):
+                        raise RuntimeError("unidentified files in new cache: investigate before reuse")
+                    with identity_file.open("x") as stream:
+                        json.dump(expected, stream, sort_keys=True)
                 for variable in ("VLLM_CACHE_ROOT", "TRITON_CACHE_DIR", "CUTE_DSL_CACHE_DIR", "CUDA_CACHE_PATH"):
                     path = Path(os.environ[variable])
                     path.mkdir(parents=True, exist_ok=True)
@@ -529,7 +589,7 @@ spec:
           # Rotate the key when the image, model revision, architecture or flags change.
           - name: kernel-cache
             hostPath:
-              path: /var/local/inference-cache/cache-v1-12be8a4036296480e75adaf6
+              path: /var/local/inference-cache/cache-v2-67d1a3dd85321b6426a62d1e
               type: DirectoryOrCreate
           # Source: shared models PVC on CephFS (read-only; init copies out of it).
           - name: ceph-models
