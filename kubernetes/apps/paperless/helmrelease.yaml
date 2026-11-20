@@ -29,6 +29,8 @@ spec:
   values:
     defaultPodOptions:
       automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -93,6 +95,10 @@ spec:
               # scans came back as prose). Chosen over Nemotron Lightning after a
               # 22-document side-by-side: Lightning bled the RAG "similar documents"
               # context into ~1/3 of its suggestions; Flash-Next was clean on all.
+              # AI stays disabled by default; this prepares its authenticated path.
+              PAPERLESS_AI_LLM_BACKEND: openai-like
+              PAPERLESS_AI_LLM_ENDPOINT: http://127.0.0.1:8081/v1
+              PAPERLESS_AI_LLM_ALLOW_INTERNAL_ENDPOINTS: "true"
               PAPERLESS_AI_LLM_MODEL: nvidia/Qwen3.8-Flash-Next-NVFP4
               PAPERLESS_AI_LLM_API_KEY: local
               PAPERLESS_AI_LLM_REQUEST_TIMEOUT: "600"
@@ -153,6 +159,37 @@ spec:
                 memory: 1Gi
               limits:
                 memory: 4Gi
+          gateway-token-proxy:
+            image:
+              repository: ghcr.io/frecklelabs/agent-platform/inference-mcp
+              tag: main-20261119T235211Z-d774aba@sha256:03aaf5a743aee2e1cb8d7cfb5c33d8aeca35aad15f1abc5f39aa375085fcb131
+            args: [gateway-token-proxy]
+            env:
+              AI_GATEWAY_TOKEN_FILE: /var/run/secrets/ai-gateway/token
+              AI_GATEWAY_MODEL: nvidia/Qwen3.8-Flash-Next-NVFP4
+              # Bound Go's working heap below the container limit. Eight buffered
+              # requests plus JSON copies can exceed the raw 128 MiB body budget.
+              GOMEMLIMIT: 512MiB
+            # The listener is loopback-only; kubelet HTTP/TCP probes would target
+            # the pod address. Process exit restarts it; live calls verify health.
+            probes:
+              startup:
+                enabled: false
+              readiness:
+                enabled: false
+              liveness:
+                enabled: false
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 768Mi
           gotenberg:
             image:
               repository: docker.io/gotenberg/gotenberg
@@ -211,6 +248,21 @@ spec:
                 port: 8000
 
     persistence:
+      ai-gateway-token:
+        type: custom
+        volumeSpec:
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  audience: ai-gateway
+                  expirationSeconds: 3600
+                  path: token
+        advancedMounts:
+          paperless:
+            gateway-token-proxy:
+              - path: /var/run/secrets/ai-gateway
+                readOnly: true
       # One PVC (from the volsync component) holds everything paperless
       # must keep; subPaths keep the four trees separate.
       data:
