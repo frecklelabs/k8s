@@ -1,12 +1,12 @@
-# Vendored from kubernetes-sigs/gateway-api @ v1.6.3
-# Source: https://github.com/kubernetes-sigs/gateway-api/blob/v1.6.3/config/crd/standard/gateway.networking.k8s.io_backendtlspolicies.yaml
+# Vendored from kubernetes-sigs/gateway-api @ v1.7.0
+# Source: https://github.com/kubernetes-sigs/gateway-api/blob/v1.7.0/config/crd/standard/gateway.networking.k8s.io_backendtlspolicies.yaml
 # To bump: bump TAG in scripts/vendor-gateway-api-crds.sh and re-run.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.6.3
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/5371
+    gateway.networking.k8s.io/bundle-version: v1.7.0
     gateway.networking.k8s.io/channel: standard
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -172,6 +172,7 @@ spec:
                         resources, SectionName is interpreted as the following:
 
                         * Gateway: Listener name
+                        * ListenerSet: Listener name
                         * HTTPRoute: HTTPRouteRule name
                         * Service: Port name
 
@@ -848,6 +849,7 @@ spec:
                         resources, SectionName is interpreted as the following:
 
                         * Gateway: Listener name
+                        * ListenerSet: Listener name
                         * HTTPRoute: HTTPRouteRule name
                         * Service: Port name
 
