@@ -9,6 +9,7 @@ components:
   - ../../../../components/flux-post-build-variables
 resources:
   - ./tuppr.yaml
+  - ./cnp-tuppr.yaml
   - ./tuppr-plans.yaml
 patches:
   - target:
