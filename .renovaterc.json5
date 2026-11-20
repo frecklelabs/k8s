@@ -52,6 +52,15 @@
   },
   packageRules: [
     {
+      // Paperless uses gotenberg-client 1.x: Gotenberg 9 removes its
+      // /forms/pdfengines routes and replaces pdfa with stages. Lift this
+      // only with a compatible Paperless client and validated conversions.
+      matchDatasources: ['docker'],
+      matchFileNames: ['kubernetes/apps/paperless/helmrelease.yaml'],
+      matchPackageNames: ['docker.io/gotenberg/gotenberg'],
+      allowedVersions: '<9',
+    },
+    {
       // Fixed export and archive-verification Jobs belong to an approved recovery
       // point. Image bumps change immutable pod templates; review client-image
       // changes with the recovery plan rather than recreating these Jobs.
