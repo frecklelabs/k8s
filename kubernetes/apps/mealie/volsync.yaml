@@ -1,0 +1,67 @@
+---
+# Keep the existing Helm-owned claim; only the backup claim is managed here.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mealie-config-backup
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 15Gi
+  storageClassName: truenas-nfs-backup
+---
+# Persistent rsync-tls listener for this app. No trigger: the destination
+# side of rsync-tls runs continuously and accepts whatever the source sends
+# on its schedule. copyMethod Direct writes straight into the backup PVC —
+# history is ZFS snapshots on the NAS, so no VolumeSnapshots are taken here.
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: mealie-config
+spec:
+  rsyncTLS:
+    destinationPVC: mealie-config-backup
+    copyMethod: Direct
+    serviceType: ClusterIP
+    moverSecurityContext:
+      runAsUser: 911
+      runAsGroup: 911
+      fsGroup: 911
+      fsGroupChangePolicy: OnRootMismatch
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+---
+# Scheduled push of the app's PVC to its listener. copyMethod Snapshot takes
+# a CSI snapshot of the live PVC first so the copy is crash-consistent even
+# while the app runs, then rsyncs only the delta (plus a delete pass so the
+# destination mirrors the source exactly — ZFS snapshots are what keep
+# deleted files recoverable).
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: mealie-config
+spec:
+  sourcePVC: mealie-config
+  trigger:
+    schedule: "49 * * * *"
+  rsyncTLS:
+    # Same-namespace Service + PSK Secret that volsync creates for the
+    # ReplicationDestination of the same name.
+    address: volsync-rsync-tls-dst-mealie-config
+    keySecret: volsync-rsync-tls-mealie-config
+    copyMethod: Snapshot
+    volumeSnapshotClassName: csi-ceph-blockpool
+    storageClassName: ceph-block
+    accessModes: [ReadWriteOnce]
+    moverSecurityContext:
+      runAsUser: 911
+      runAsGroup: 911
+      fsGroup: 911
+      fsGroupChangePolicy: OnRootMismatch
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
