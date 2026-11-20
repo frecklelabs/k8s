@@ -46,7 +46,7 @@ spec:
       # Every torznab indexer except the anime-only one (10), which only the
       # anime run below searches. Add new indexers here.
       QUI_SEEDED_SEARCH_INDEXER_IDS: "2,5,6,7,8,9"
-      # Anime run (tv-anime only, indexer 10): three days after each main
+      # Anime run (tv-sonarr with tag anime, indexer 10): three days after each main
       # run, which takes about a day for ~1,200 torrents at 60 s.
       QUI_ANIME_SEARCH_DAYS: "8,23"
       QUI_ANIME_SEARCH_INDEXER_IDS: "10"
