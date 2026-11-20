@@ -4,7 +4,8 @@ name: Labeler
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  # Same-repository PRs get a write token; the job skips forks below.
+  pull_request:
     branches: ["main"]
 
 # GITHUB_TOKEN, scoped to this repo and run: the labeler only labels this
