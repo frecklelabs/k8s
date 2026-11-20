@@ -10,3 +10,4 @@ components:
 resources:
   - ./external-secrets.yaml
   - ./mealie.yaml
+  - ./file-check.yaml
