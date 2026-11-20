@@ -520,8 +520,23 @@ kubelet:
       metricRelabelConfigs:
         - action: labeldrop
           regex: (uid)
+        # cAdvisor series for non-pod cgroups (root, /init, /system,
+        # /podruntime, /kubepods and everything below them) carry no pod or
+        # container label: `id` (the cgroup path) is their only identity.
+        # Dropping it merged them into one series per metric whose samples
+        # collide, so host CPU outside pods couldn't be attributed (C-2067).
+        # Keep `id` on the top-level cgroups only and drop the deeper non-pod
+        # ones (per-service /system/*, /podruntime/*, QoS classes), which
+        # bounds the added series to a handful per metric per node. Series
+        # with no `id` at all (kubelet's own metrics) are untouched.
+        # Query: container_cpu_usage_seconds_total{pod="",id="/system"}.
+        - action: drop
+          if: '{pod="", id=~"/[^/]+/.+"}'
         - action: labeldrop
-          regex: (id|name)
+          if: '{pod!=""}'
+          regex: (id)
+        - action: labeldrop
+          regex: (name)
         - action: drop
           source_labels: [__name__]
           regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
