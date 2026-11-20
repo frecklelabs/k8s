@@ -43,6 +43,11 @@ vmsingle:
 
 defaultRules:
   rules:
+    # A recovered error stays in increase[5m] long enough to satisfy a 5m hold.
+    # Keep recurring-error coverage while letting short startup bursts age out.
+    RecordingRulesError:
+      spec:
+        for: 10m
     # Scheduler requests include overlapping native sidecars, sequential init
     # maxima and pod overhead. Deduplicate scheduler replicas before phase joins.
     namespace_cpu:kube_pod_container_resource_requests:sum:
