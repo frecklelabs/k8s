@@ -1,5 +1,5 @@
 ---
-# Seeded search of the anime downloads (category tv-anime) against the
+# Seeded search of the anime downloads (category tv-sonarr and tag anime) against the
 # anime-only indexers, which the main qui-seeded-search run leaves out.
 # Same pacing as the main run: one search per interval, 12 h cooldown.
 # qui runs one seeded search at a time and answers a second start with 409,
@@ -43,7 +43,7 @@ spec:
                 - -H
                 - "Content-Type: application/json"
                 - -d
-                - '{"instanceId":${QUI_REEL_INSTANCE_ID},"categories":["tv-anime"],"intervalSeconds":${QUI_SEEDED_SEARCH_INTERVAL_SECONDS:=60},"cooldownMinutes":720,"indexerIds":[${QUI_ANIME_SEARCH_INDEXER_IDS}]}'
+                - '{"instanceId":${QUI_REEL_INSTANCE_ID},"categories":["tv-sonarr"],"tags":["anime"],"intervalSeconds":${QUI_SEEDED_SEARCH_INTERVAL_SECONDS:=60},"cooldownMinutes":720,"indexerIds":[${QUI_ANIME_SEARCH_INDEXER_IDS}]}'
                 - http://qui/api/cross-seed/search/run
               env:
                 - name: QUI_API_KEY
