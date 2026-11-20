@@ -29,7 +29,7 @@ docs you're reading now.
 
 ## Reference
 
-- [Device Inventory](reference/inventory.md) — every device across all sites
+- [Device Inventory](reference/inventory.md) — inventory publication policy
 - [Naming Conventions](reference/naming-conventions.md) — device and cluster naming
   scheme
 - [Glossary](reference/glossary.md) — acronyms and terms used in these docs

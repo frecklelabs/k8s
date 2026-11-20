@@ -1,12 +1,10 @@
 ---
-description: Physical sites — rack layouts, hardware inventory, and network topology
+description: Site documentation and operating patterns
 ---
 
 # Sites
 
-Each site page covers the physical layer — what hardware is where, rack
-diagrams, and network topology. Configuration details live in the topic
-sections (compute, networking, storage, etc.).
+Site pages link to operating patterns and topic guides. Current hardware
+inventory, rack elevations and physical topology are maintained privately.
 
-- [Fairy](fairy/index.md) — primary homelab site with compute rack, GPU
-  nodes, and home network infrastructure
+- [Fairy](fairy/index.md) — site documentation and related guides

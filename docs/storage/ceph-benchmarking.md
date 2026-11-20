@@ -66,11 +66,9 @@ ip -s link show $iface
 ethtool $iface | grep Speed
 ```
 
-On fairy specifically: cn02, cn03, and the DGX Sparks are on a transient
-**1 GbE** uplink while r02-tor01 cabling is being migrated. Until that
-migration completes, benchmarks from cn01 against OSDs on those nodes will
-be capped at ~80–110 MiB/s of effective throughput regardless of the
-cluster's actual capability.
+A temporary slow link can cap throughput regardless of storage capacity.
+Measure the current path before interpreting a benchmark; keep site-specific
+cabling and migration notes in private operations documentation.
 
 ## Test pod setup
 
