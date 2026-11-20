@@ -14,8 +14,7 @@ docs you're reading now.
 
 ## Sites
 
-- [Fairy](sites/fairy/index.md) — primary homelab site with compute rack,
-  GPU nodes, and home network infrastructure
+- [Fairy](sites/fairy/index.md) — homelab architecture overview
 
 ## Runbooks
 
@@ -29,7 +28,7 @@ docs you're reading now.
 
 ## Reference
 
-- [Device Inventory](reference/inventory.md) — every device across all sites
+- [Device Inventory](reference/inventory.md) — public inventory scope and design references
 - [Naming Conventions](reference/naming-conventions.md) — device and cluster naming
   scheme
 - [Glossary](reference/glossary.md) — acronyms and terms used in these docs

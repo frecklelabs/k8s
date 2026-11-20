@@ -67,7 +67,7 @@ description: Glossary of acronyms and terms used throughout the infrastructure d
 
 ## Firewalla
 
-Firewalla uses some non-standard terminology in its UI and documentation.
+These terms appear in the historical Firewalla platform guide.
 
 | Term | Definition |
 |------|------------|
