@@ -43,6 +43,12 @@ vmsingle:
 
 defaultRules:
   rules:
+    # The lookback must expire before the hold: a recovered startup burst must
+    # not stay pending long enough to page. Repeated errors still page in 5m.
+    RecordingRulesError:
+      spec:
+        expr: sum(increase(vmalert_recording_rules_errors_total[2m])) without(id) > 0
+        for: 5m
     # Scheduler requests include overlapping native sidecars, sequential init
     # maxima and pod overhead. Deduplicate scheduler replicas before phase joins.
     namespace_cpu:kube_pod_container_resource_requests:sum:
