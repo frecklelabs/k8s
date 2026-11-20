@@ -223,6 +223,37 @@ defaultRules:
                   label_copy(kube_cronjob_status_last_successful_time{job="kube-state-metrics"}, "cronjob", "owner_name")
                 )
             )
+    # C-887 deliberately stages fairy node-exporter with OnDelete. Live KSM
+    # exposes no strategy/labels metric for a strategy-aware join. Exempt only
+    # this pilot's updated-count mismatch; scheduling, misscheduling and
+    # availability still alert. Remove this exception when the pilot ends.
+    KubeDaemonSetRolloutStuck:
+      spec:
+        expr: |-
+          (
+            (
+              kube_daemonset_status_current_number_scheduled{job="kube-state-metrics",namespace=~".*"}
+              != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"}
+            )
+            or
+            (kube_daemonset_status_number_misscheduled{job="kube-state-metrics",namespace=~".*"} != 0)
+            or
+            (
+              (
+                kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",namespace=~".*"}
+                != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"}
+              )
+              unless on (cluster, namespace, daemonset)
+                kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",cluster="fairy-k8s01",namespace="observability",daemonset="vm-k8s-stack-prometheus-node-exporter"}
+            )
+            or
+            (
+              kube_daemonset_status_number_available{job="kube-state-metrics",namespace=~".*"}
+              != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"}
+            )
+          )
+          and
+          (changes(kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",namespace=~".*"}[5m]) == 0)
     # LWS leaders deliberately retain old groups below the canary partition.
     # Suppress only a settled canary with every leader ready and enough updated
     # groups; missing partition telemetry fails open to the stock alert. Worker
