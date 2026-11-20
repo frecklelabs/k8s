@@ -11,17 +11,31 @@ spec:
       rules:
         # Keep pod identity through the hold period so a succession of short-lived
         # pods on one node cannot accumulate into a false sustained wait.
+        # KSM scrapes every 20s. Expire each raw waiting series after 60s,
+        # before union/aggregation, so one startup sample cannot fill the 2m hold.
         - alert: KubePodContainerCreating
           expr: |-
             (
               max by (cluster, namespace, pod) (
-                kube_pod_container_status_waiting_reason{
-                  job="kube-state-metrics", reason="ContainerCreating"
-                }
+                (
+                  kube_pod_container_status_waiting_reason{
+                    job="kube-state-metrics", reason="ContainerCreating"
+                  }
+                  and
+                  (time() - timestamp(kube_pod_container_status_waiting_reason{
+                    job="kube-state-metrics", reason="ContainerCreating"
+                  }) < 60)
+                )
                 or
-                kube_pod_init_container_status_waiting_reason{
-                  job="kube-state-metrics", reason="ContainerCreating"
-                }
+                (
+                  kube_pod_init_container_status_waiting_reason{
+                    job="kube-state-metrics", reason="ContainerCreating"
+                  }
+                  and
+                  (time() - timestamp(kube_pod_init_container_status_waiting_reason{
+                    job="kube-state-metrics", reason="ContainerCreating"
+                  }) < 60)
+                )
               ) == 1
             )
             * on (cluster, namespace, pod) group_left(node)
