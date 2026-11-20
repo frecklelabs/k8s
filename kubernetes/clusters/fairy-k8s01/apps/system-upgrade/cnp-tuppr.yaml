@@ -1,0 +1,39 @@
+---
+# Keep admission isolated from ordinary pods while preserving the controller's
+# shared metrics/health listener. Egress stays unrestricted for reconciliation.
+# The verified fairy apiserver identity covers same-node and remote-node paths;
+# do not narrow it to host or remote-node. Accepted limit: control-plane
+# host-network processes share the kube-apiserver identity.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: tuppr
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: tuppr
+      app.kubernetes.io/name: tuppr
+  ingress:
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+    # Kubelet /healthz and /readyz use the metrics listener too.
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/component: monitoring
+            app.kubernetes.io/instance: vm
+            app.kubernetes.io/name: vmagent
+            k8s:io.kubernetes.pod.namespace: observability
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
