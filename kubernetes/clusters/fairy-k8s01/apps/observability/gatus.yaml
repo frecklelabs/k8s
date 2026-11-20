@@ -5,8 +5,6 @@ kind: Kustomization
 metadata:
   name: &app gatus
   namespace: &namespace observability
-  labels:
-    infra.freckle.systems/post-build-variables: enabled
 spec:
   commonMetadata:
     labels:
@@ -16,6 +14,19 @@ spec:
       namespace: rook-ceph
   targetNamespace: *namespace
   path: ./kubernetes/apps/observability/gatus
+  # Listed here rather than through the flux-post-build-variables component:
+  # TAILNET_DOMAIN lives in the private cluster-settings ConfigMap, which is
+  # reflected only into the namespaces that use it. Not optional, so a missing
+  # ConfigMap fails the reconcile instead of rendering an empty domain.
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: k8s-cluster-info
+      - kind: ConfigMap
+        name: cluster-settings
+      - kind: Secret
+        name: namespace-post-build-secrets
+        optional: true
   prune: true
   sourceRef:
     kind: GitRepository
