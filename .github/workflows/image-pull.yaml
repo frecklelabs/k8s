@@ -9,6 +9,9 @@ on:
   # the group's commit or the queue waits forever.
   merge_group:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
@@ -17,6 +20,10 @@ jobs:
   filter:
     name: Image Pull - Filter
     runs-on: ubuntu-latest
+    # action-changed-files lists the PR's files through the API.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed_files || steps.merge-group-files.outputs.changed_files }}
     steps:
