@@ -1,11 +1,11 @@
 ---
-description: How to benchmark Ceph RBD performance from a Kubernetes client with fio, what numbers to expect from this cluster, and the common gotchas that make naive runs misleading
+description: How to benchmark Ceph RBD performance from a Kubernetes client with fio, example performance ranges, and the common gotchas that make naive runs misleading
 ---
 
 # Ceph RBD benchmarking
 
 How to characterize Ceph RBD performance from a Kubernetes pod with `fio`,
-what targets to expect on this hardware, and the setup mistakes that make
+how to interpret example performance ranges, and the setup mistakes that make
 naive runs read low without telling you why.
 
 ## When to run
@@ -38,10 +38,11 @@ the *interesting* one: every write goes to all replicas, so write IOPS at
 3x replication costs ~3x the cluster work of a read. That's where you'll see
 network bottlenecks first.
 
-## Cluster expectations
+## Example cluster expectations
 
-NVMe-only Ceph cluster, replication=3, healthy 10 GbE+ inter-OSD network,
-single client to a single RBD image:
+The example ranges below assume an NVMe-only Ceph cluster, replication=3,
+a healthy 10 GbE+ inter-OSD network, and a single client accessing a single
+RBD image:
 
 | Test | Reasonable range |
 |---|---|
@@ -73,7 +74,8 @@ cabling and migration notes in private operations documentation.
 ## Test pod setup
 
 Diagnostic namespace + a single PVC + Job. Adjust `nodeSelector` to pin to
-the node you're characterizing.
+the node you're characterizing. Replace `<NODE_HOSTNAME>` with that node's
+`kubernetes.io/hostname` label value before applying the example.
 
 ```yaml
 ---
@@ -107,7 +109,7 @@ spec:
     spec:
       restartPolicy: Never
       nodeSelector:
-        kubernetes.io/hostname: fairy-r02-cn01    # change me
+        kubernetes.io/hostname: "<NODE_HOSTNAME>"
       tolerations:
         - operator: Exists
       containers:
@@ -157,7 +159,7 @@ instead of getting served zero-fill from object thin-provisioning.
 ### Cluster-aggregate variant
 
 To exercise the whole cluster, duplicate the Job pinned to a different node
-per copy (cn01, cn02, cn03, dgx01…) and run them simultaneously. Sum the
+per copy and run them simultaneously. Sum the
 read/write IOPS and BW from each pod's output. That's your cluster ceiling
 for the workload mix.
 
