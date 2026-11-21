@@ -16,7 +16,7 @@ clusterEndpoint: https://api.atlantis-k8s01.freckle.services:6443
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
 kubernetesVersion: v1.37.2
 # renovate: datasource=custom.talos-factory depName=siderolabs/talos
-talosVersion: v1.14.5
+talosVersion: v1.14.6
 platform: metal
 secureboot: false
 schematicId: "@schematics/compute.yaml"
