@@ -3,12 +3,10 @@
 name: Vendored CRDs Check
 
 on:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - "kubernetes/apps/networking/gateway-api/**"
-      - "scripts/vendor-gateway-api-crds.sh"
-      - ".github/workflows/vendored-crds-check.yaml"
+  # render.yaml calls this on pull_request and merge_group when a change
+  # touches kubernetes/apps/networking/gateway-api/, the vendor script or
+  # this workflow, and gates it through the required "Render - Success".
+  workflow_call:
 
 jobs:
   gateway-api:

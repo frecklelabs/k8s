@@ -1,0 +1,263 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# The merge queue's manifest gate. "Render - Success" is the required check:
+# every Flux Kustomization and HelmRelease of every cluster renders, the output
+# passes schema validation, and the repository validation workflows pass.
+#
+# Queue groups combine PRs that were never tested together, so on merge_group
+# this renders everything regardless of what changed. On pull_request it skips
+# the render only when nothing it reads changed. Skipped jobs count as success
+# in the aggregate, so a docs-only PR never stalls the queue.
+name: Render
+
+on:
+  pull_request:
+    branches: ["main"]
+  merge_group:
+  # Only to seed the flate cache that PRs and queue groups restore: a cache
+  # saved on a queue or PR ref is invisible to every other ref.
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  changes:
+    name: Render - Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      render: ${{ steps.files.outputs.render }}
+      gateway-api: ${{ steps.files.outputs.gateway_api }}
+    steps:
+      - name: Changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.merge_group.base_sha }}
+          HEAD: ${{ github.event.merge_group.head_sha }}
+        run: |
+          case "${EVENT}" in
+            pull_request)
+              # Removed files count: deleting a resource can break a render.
+              gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
+                  --jq '.[] | .filename, (.previous_filename // empty)' > files.txt ;;
+            merge_group)
+              gh api --paginate "repos/${GITHUB_REPOSITORY}/compare/${BASE}...${HEAD}" \
+                  --jq '.files[] | .filename, (.previous_filename // empty)' > files.txt ;;
+            *)
+              : > files.txt ;;
+          esac
+          cat files.txt
+
+          render=false
+          if [ "${EVENT}" != pull_request ] || grep -qE \
+              '^(kubernetes/|ci/render-placeholders/|mise\.toml$|scripts/prepare-(render|image-pull)-root\.py$|\.github/workflows/render\.yaml$)' \
+              files.txt; then
+            render=true
+          fi
+          gateway_api=false
+          if grep -qE \
+              '^(kubernetes/apps/networking/gateway-api/|scripts/vendor-gateway-api-crds\.sh$|\.github/workflows/(vendored-crds-check|render)\.yaml$)' \
+              files.txt; then
+            gateway_api=true
+          fi
+          echo "render=${render}" >> "${GITHUB_OUTPUT}"
+          echo "gateway_api=${gateway_api}" >> "${GITHUB_OUTPUT}"
+          echo "render=${render} gateway-api=${gateway_api}"
+
+  clusters:
+    name: Render - Cluster List
+    runs-on: ubuntu-latest
+    outputs:
+      cluster-list: ${{ steps.list.outputs.clusters }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        name: Get Cluster List
+        working-directory: ./kubernetes/clusters
+        run: |
+          echo "clusters=$(ls -d * | jq --raw-input --slurp --compact-output 'split("\n")[:-1]')" >> "${GITHUB_OUTPUT}"
+
+  render:
+    if: ${{ needs.changes.outputs.render == 'true' }}
+    needs: [changes, clusters]
+    name: Render (${{ matrix.cluster }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cluster: ${{ fromJSON(needs.clusters.outputs.cluster-list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # kubeconform from mise.toml.
+      - name: Setup kubeconform
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: aqua:yannh/kubeconform
+
+      # Same flate as image-pull.yaml. base: "" keeps flate in full-tree
+      # mode; the action's default (the default branch) is changed-only mode.
+      - name: Setup flate
+        uses: home-operations/flate/action@2e5aa3f729477baa631486ce9b92a5df197286c2 # main
+        with:
+          base: ""
+          version: "0.4.12"
+
+      # Charts are pinned by version and the render caches are keyed by
+      # content, so reusing main's cache cannot change a result, only skip
+      # downloads.
+      - name: Restore flate cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.FLATE_CACHE_DIR }}
+          key: flate-render-${{ matrix.cluster }}-${{ github.sha }}
+          restore-keys: |
+            flate-render-${{ matrix.cluster }}-
+
+      # Root kustomization (as image-pull) plus placeholders for what only
+      # the live cluster has: Reflector's copies of k8s-cluster-info and
+      # k8s-cluster-secrets, and ci/render-placeholders/<cluster>.yaml.
+      - name: Prepare render root
+        env:
+          CLUSTER: ${{ matrix.cluster }}
+        run: python3 scripts/prepare-render-root.py "${CLUSTER}"
+
+      # Every Kustomization (kustomize build + postBuild substitution) and
+      # every HelmRelease (helm template with its values) of the cluster.
+      #
+      # --allow-missing-secrets: as image-pull.yaml, for the janet/hedgehog
+      # OCIRepositories that authenticate with the ClusterExternalSecret-made
+      # `ghcr-pull`. Their bundles live in the app repos. The private
+      # infra-private GitRepository is skipped the same way (no deploy key
+      # here). Both show as "skipped" in the log, not as failures.
+      #
+      # --api-versions: as image-pull.yaml, the DRA DeviceClass API both
+      # clusters serve, which the GPU charts check for.
+      - name: Render
+        env:
+          CLUSTER: ${{ matrix.cluster }}
+        run: |
+          kube_version=$(sed -nE 's/^kubectl = "([^"]+)"/\1/p' mise.toml)
+          mkdir -p rendered
+          # A chart or source fetch can fail transiently. Retry only then;
+          # anything else fails at once so a broken group leaves the queue fast.
+          for attempt in 1 2 3; do
+            rc=0
+            flate build all \
+              --path "kubernetes/clusters/${CLUSTER}/flux" \
+              --allow-missing-secrets \
+              --api-versions resource.k8s.io/v1/DeviceClass \
+              --kube-version "${kube_version}" \
+              --output yaml \
+              --no-progress > "rendered/${CLUSTER}.yaml" 2> flate.err || rc=$?
+            cat flate.err
+            [ "${rc}" -eq 0 ] && break
+            transient='timed out|timeout|connection reset|connection refused|TLS handshake|unexpected EOF|50[0-9] |429 |Too Many Requests|no such host'
+            if [ "${attempt}" -eq 3 ] || ! grep '✗' flate.err | grep -qE "${transient}"; then
+              {
+                echo "## Render failed: ${CLUSTER}"
+                echo '```'
+                grep -E '✗|⊘|^\s+(required by|blocks)' flate.err || true
+                echo '```'
+              } >> "${GITHUB_STEP_SUMMARY}"
+              echo "::error::flate could not render every Kustomization and HelmRelease for ${CLUSTER}"
+              exit 1
+            fi
+            echo "::warning::render attempt ${attempt} hit a fetch error; retrying"
+            sleep $((10 * attempt))
+          done
+          {
+            echo "## Rendered ${CLUSTER}"
+            tail -1 flate.err
+            echo "$(grep -c '^kind:' "rendered/${CLUSTER}.yaml") objects"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # Rendered output against the schemas of what the clusters run
+      # (k8s-schemas.freckle.systems, published by schemas.yaml), falling
+      # back to the upstream Kubernetes and CRDs-catalog schemas. A kind with
+      # no schema anywhere is skipped and counted, not failed.
+      - name: Validate rendered schemas
+        env:
+          CLUSTER: ${{ matrix.cluster }}
+        run: |
+          set -o pipefail
+          kubeconform \
+            -strict \
+            -ignore-missing-schemas \
+            -summary \
+            -output text \
+            -schema-location default \
+            -schema-location 'https://k8s-schemas.freckle.systems/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json' \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json' \
+            "rendered/${CLUSTER}.yaml" | tee kubeconform.txt
+          echo "$(tail -1 kubeconform.txt)" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Save flate cache
+        if: ${{ github.event_name == 'push' && success() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.FLATE_CACHE_DIR }}
+          key: flate-render-${{ matrix.cluster }}-${{ github.sha }}
+
+  # The repository validation workflows, gated through the aggregate below so
+  # they report on merge_group too. Each still filters on its own paths for
+  # pull_request and runs in full on merge_group. On push they run from their
+  # own push trigger instead.
+  schema-validation:
+    if: ${{ github.event_name != 'push' }}
+    name: Schema
+    uses: ./.github/workflows/schema-validation.yaml
+
+  kustomization-completeness:
+    if: ${{ github.event_name != 'push' }}
+    name: Completeness
+    uses: ./.github/workflows/kustomization-completeness.yaml
+
+  repository-validation:
+    if: ${{ github.event_name != 'push' }}
+    name: Repository
+    uses: ./.github/workflows/repository-validation.yaml
+
+  vendored-crds:
+    if: ${{ needs.changes.outputs.gateway-api == 'true' }}
+    needs: changes
+    name: Vendored CRDs
+    uses: ./.github/workflows/vendored-crds-check.yaml
+
+  success:
+    if: ${{ !cancelled() }}
+    needs:
+      - changes
+      - clusters
+      - render
+      - schema-validation
+      - kustomization-completeness
+      - repository-validation
+      - vendored-crds
+    name: Render - Success
+    runs-on: ubuntu-latest
+    steps:
+      # Skipped counts as success; a failed or cancelled job does not.
+      - name: Check results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "${RESULTS}" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          [ "${FAILED}" = false ]

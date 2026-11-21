@@ -2,8 +2,9 @@
 name: Schema Validation
 
 on:
-  pull_request:
-    branches: ["main"]
+  # Pull requests and merge queue groups run this through render.yaml, whose
+  # "Render - Success" is the required check.
+  workflow_call:
   push:
     branches: ["main"]
 
@@ -14,8 +15,12 @@ jobs:
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed_files }}
     steps:
+      # Skipped on merge_group (the action only knows pull_request and
+      # push): the output stays empty, which is not '[]', so a queue group
+      # always validates in full.
       - name: Get Changed Files
         id: changed-files
+        if: ${{ github.event_name != 'merge_group' }}
         uses: bjw-s-labs/action-changed-files@147be9638332cf68fd60714a610509d7a9360d60 # v0.7.0
         with:
           patterns: |-

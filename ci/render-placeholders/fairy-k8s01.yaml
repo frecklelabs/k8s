@@ -1,0 +1,44 @@
+# Live-only inputs of fairy-k8s01's public Flux Kustomizations, for the
+# offline render check (.github/workflows/render.yaml). Not applied to any
+# cluster: scripts/prepare-render-root.py copies this into the CI checkout.
+# Values only have to render. Addresses are RFC 5737 documentation space.
+#
+# Add an entry when a Kustomization starts reading a ConfigMap/Secret or
+# depending on a Kustomization that only the private repo creates; the check
+# names it ("<ns>/<name> not found").
+---
+# Created by the private repo; read by gateway-system/gateway-configs and
+# gateway-system/mcp-gateway.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: site-public-values
+  namespace: gateway-system
+data:
+  SITE_FAIRY_PUBLIC_V4_GATEWAY: 192.0.2.10
+---
+# Created by the private repo; read by minecraft/minecraft-hogwarts.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: site-public-values
+  namespace: minecraft
+data:
+  SITE_FAIRY_PUBLIC_V4_MINECRAFT: 192.0.2.11
+---
+# cockpit is deployed from the private repo; observability/alertmanager-cockpit
+# waits for it. A suspended stub counts as ready offline and renders nothing.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cockpit
+  namespace: agent-platform
+spec:
+  suspend: true
+  interval: 1h
+  path: ./render-placeholder
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system

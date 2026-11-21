@@ -2,8 +2,9 @@
 name: Repository Validation
 
 on:
-  pull_request:
-    branches: ["main"]
+  # Pull requests and merge queue groups run this through render.yaml, whose
+  # "Render - Success" is the required check.
+  workflow_call:
   push:
     branches: ["main"]
   workflow_dispatch:
