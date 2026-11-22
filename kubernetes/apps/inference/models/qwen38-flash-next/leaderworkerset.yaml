@@ -51,11 +51,11 @@ metadata:
   name: qwen38-flash-next
 spec:
   replicas: 2
-  # Keep group 0 serving while group 1 measures persistent kernel reuse.
+  # Promote the validated template while keeping one serving group available.
   rolloutStrategy:
     type: RollingUpdate
     rollingUpdateConfiguration:
-      partition: 1
+      partition: 0
       maxSurge: 0
       maxUnavailable: 1
   leaderWorkerTemplate:
