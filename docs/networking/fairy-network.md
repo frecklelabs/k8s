@@ -31,6 +31,12 @@ a secondary network interface only when a workload needs protocols that cannot
 cross its normal network boundary. Such an interface needs its own access policy
 and should not provide unrestricted access to other segments.
 
+## Routing services
+
+A router needs routes to service addresses outside its connected networks.
+[BGP](fairy-bgp.md) can advertise those routes dynamically. Verify return paths
+and firewall policy as well as route availability.
+
 ## Discovery and DNS
 
 Give clients stable service aliases so replacing a host does not require client

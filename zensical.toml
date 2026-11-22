@@ -57,8 +57,8 @@ nav = [
   ]},
   { "Networking" = [
     { "Networking" = "networking/index.md" },
-    { "Fairy Network Topology" = "networking/fairy-network.md" },
-    { "Fairy BGP (Cilium to UDM)" = "networking/fairy-bgp.md" },
+    { "Fairy Network Overview" = "networking/fairy-network.md" },
+    { "BGP for Kubernetes Services" = "networking/fairy-bgp.md" },
     { "Cilium Cluster Mesh" = "networking/cluster-mesh.md" },
     { "Domains" = "networking/domains.md" },
     { "Internal DNS" = "networking/internal-dns.md" },
