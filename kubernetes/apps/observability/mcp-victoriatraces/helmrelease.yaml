@@ -66,11 +66,11 @@ spec:
             resources:
               requests:
                 cpu: 10m
-                memory: 128Mi
-              limits:
-                # Large trace queries peaked at 511Mi on atlantis and were
-                # OOMKilled at 512Mi on fairy.
                 memory: 1Gi
+              limits:
+                # Trace queries approach 1Gi; reserve their observed footprint
+                # and leave headroom for concurrent requests.
+                memory: 2Gi
 
     service:
       app:
