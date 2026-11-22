@@ -172,8 +172,11 @@ defaultRules:
     # or an out-of-sync peer keeps the age check; source Jobs never qualify.
     # KubeJobFailed, VolsyncVolumeOutOfSync, VolsyncMissedSchedule and
     # VolsyncMoverContainerCreating still cover failed/stale/stuck movers.
+    # Require sustained age-check failures across brief listener readiness
+    # transitions and controller telemetry gaps. Real stalls page 5m later.
     KubeJobNotCompleted:
       spec:
+        for: 5m
         expr: |-
           (
             (time() - max by (namespace, job_name, cluster) (
