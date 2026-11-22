@@ -63,11 +63,12 @@ spec:
     # can't change, and it called ChatGPT Codex, OpenAI auth, GitHub and Google
     # with no rate-limit handling. Each workload child KS this applies gets a
     # patch that scales its Deployments to 0. The DB, its backups, the secrets
-    # and the namespaces stay as they are. To unpark, remove the following patch.
+    # and the namespaces stay as they are. To unpark, remove the Deployment
+    # patches; keep the UI policy repair below while the bundle is archived.
     - target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization
-        name: janet-(api|controller|scheduler|ui)
+        name: janet-(api|controller|scheduler)
       patch: |
         - op: add
           path: /spec/patches
@@ -79,3 +80,29 @@ spec:
                 - op: replace
                   path: /spec/replicas
                   value: 0
+    # The archived bundle uses egress: [], which Cilium rejects as no rules.
+    # The static UI server needs no outbound calls; one empty rule restores
+    # the intended default-deny without rebuilding or reopening the app repo.
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: janet-ui
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                group: apps
+                kind: Deployment
+              patch: |
+                - op: replace
+                  path: /spec/replicas
+                  value: 0
+            - target:
+                group: cilium.io
+                kind: CiliumNetworkPolicy
+                name: janet-ui-egress
+              patch: |
+                - op: replace
+                  path: /spec/egress
+                  value: [{}]
