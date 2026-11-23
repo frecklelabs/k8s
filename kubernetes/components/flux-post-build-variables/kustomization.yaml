@@ -15,13 +15,6 @@ patches:
           substituteFrom:
             - kind: ConfigMap
               name: k8s-cluster-info
-            # Retiring (C-2137): TAILNET_DOMAIN moves to the private
-            # cluster-settings ConfigMap, which only its consumers reference.
-            # Optional so each cluster's Secret can go before this entry is
-            # dropped.
-            - kind: Secret
-              name: k8s-cluster-secrets
-              optional: true
             - kind: Secret
               name: namespace-post-build-secrets
               optional: true
