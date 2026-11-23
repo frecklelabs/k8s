@@ -24,3 +24,83 @@ spec:
   interval: 30s
   retryInterval: 1m
   timeout: 5m
+  # Reuse the existing read-only log view and persistent checkpoint directory.
+  patches:
+    - patch: |-
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: victoria-logs
+        spec:
+          values:
+            vector:
+              customConfig:
+                sources:
+                  host-kernel:
+                    type: file
+                    include:
+                      - /var/log/kernel.log
+                      - /var/log/kernel.log.1
+                    read_from: beginning
+                    ignore_checkpoints: false
+                    max_line_bytes: 32768
+                    fingerprint:
+                      strategy: device_and_inode
+                  host-udevd:
+                    type: file
+                    include:
+                      - /var/log/udevd.log
+                    # There is no event timestamp to distinguish historical lines.
+                    read_from: end
+                    ignore_checkpoints: false
+                    max_line_bytes: 32768
+                    fingerprint:
+                      strategy: device_and_inode
+                transforms:
+                  host-kernel-parser:
+                    type: remap
+                    inputs:
+                      - host-kernel
+                    source: |
+                      raw = string!(.message)
+                      parsed, parse_error = parse_regex(raw, r'^kern:\s+\w+:\s+\[(?P<event_time>[^\]]+)\]:\s*(?P<body>.*)$')
+                      event_time, time_error = parse_timestamp(parsed.event_time, format: "%+")
+                      .node = get_env_var!("VECTOR_SELF_NODE_NAME")
+                      .cluster = "${CLUSTER_NAME}"
+                      .log = truncate(raw, 8192)
+                      del(.message)
+                      .log_source = "host-kernel-unparsed"
+                      .timestamp_origin = "ingest"
+                      if parse_error == null && time_error == null && event_time <= now() {
+                        .timestamp = event_time
+                        .log = truncate(string!(parsed.body), 8192)
+                        .log_source = "host-kernel"
+                        .timestamp_origin = "event"
+                      }
+                  host-udevd-parser:
+                    type: remap
+                    inputs:
+                      - host-udevd
+                    source: |
+                      raw = string!(.message)
+                      .node = get_env_var!("VECTOR_SELF_NODE_NAME")
+                      .cluster = "${CLUSTER_NAME}"
+                      .log = truncate(raw, 8192)
+                      del(.message)
+                      .log_source = "host-udevd"
+                      .timestamp_origin = "ingest"
+                sinks:
+                  vlogs-0:
+                    inputs:
+                      - parser
+                      - audit-parser
+                      - host-kernel-parser
+                      - host-udevd-parser
+                    request:
+                      headers:
+                        VL-Stream-Fields: stream,kubernetes.pod_name,kubernetes.container_name,kubernetes.pod_namespace,log_source,cluster,node
+      target:
+        group: helm.toolkit.fluxcd.io
+        version: v2
+        kind: HelmRelease
+        name: victoria-logs
