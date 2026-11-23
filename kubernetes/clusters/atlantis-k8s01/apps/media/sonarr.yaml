@@ -39,6 +39,24 @@ spec:
       VOLSYNC_CAPACITY: 30Gi
       VOLSYNC_SCHEDULE: "3 * * * *"
   patches:
+    # Probe app health before changing the separate login-entry check.
+    # Stop redirects so an auth-policy regression cannot create sign-in flows.
+    - patch: |-
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: ${APP:=sonarr}
+        spec:
+          values:
+            route:
+              api:
+                annotations:
+                  gatus.home-operations.com/endpoint: |-
+                    path: /ping
+                    client:
+                      ignore-redirect: true
+                    conditions:
+                      - "[STATUS] == 200"
     # The live PVC was created by the restic component, which restores from a
     # bootstrap ReplicationDestination via dataSourceRef. The rsync-tls PVC has
     # none, and PVC spec is immutable, so dropping it would fail the apply.
