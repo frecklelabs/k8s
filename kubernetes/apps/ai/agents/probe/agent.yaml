@@ -11,8 +11,56 @@ spec:
   type: Declarative
   description: Connectivity probe. Replies briefly; has no tools.
   declarative:
-    modelConfig: default-model-config
+    modelConfig: probe-gateway-model
     stream: true
+    deployment:
+      imagePullSecrets:
+        - name: ghcr-pull
+      podSecurityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      volumes:
+        - name: ai-gateway-token
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  audience: ai-gateway
+                  expirationSeconds: 3600
+                  path: token
+      # Keep the inference credential out of the agent container and its config.
+      extraContainers:
+        - name: gateway-token-proxy
+          image: ghcr.io/frecklelabs/agent-platform/inference-mcp:main-20261119T235211Z-d774aba@sha256:03aaf5a743aee2e1cb8d7cfb5c33d8aeca35aad15f1abc5f39aa375085fcb131
+          args: [gateway-token-proxy]
+          env:
+            - name: AI_GATEWAY_TOKEN_FILE
+              value: /var/run/secrets/ai-gateway/token
+            - name: AI_GATEWAY_MODEL
+              value: nvidia/Qwen3.8-Flash-Next-NVFP4
+            - name: GOMEMLIMIT
+              value: 512MiB
+          volumeMounts:
+            - name: ai-gateway-token
+              mountPath: /var/run/secrets/ai-gateway
+              readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          # Loopback listener: readiness requires a real agent completion.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 768Mi
     systemMessage: |
       You are a connectivity probe for an agent platform. Reply in one short
       sentence. If asked to echo something, echo it exactly. Never use tools;
