@@ -17,8 +17,6 @@ spec:
       - kind: ConfigMap
         name: k8s-cluster-info
       - kind: Secret
-        name: k8s-cluster-secrets
-      - kind: Secret
         name: namespace-post-build-secrets
         optional: true
       - kind: ConfigMap

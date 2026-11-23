@@ -17,12 +17,7 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  # konflate has no ExternalSecret of its own, but it substitutes
-  # CLUSTER_SVCS_DOMAIN out of `k8s-cluster-secrets`, which is one. Without
-  # this the hostname substitutes empty on a cold bootstrap.
-  dependsOn:
-    - name: external-secrets-apps
-      namespace: external-secrets
+  # CLUSTER_SVCS_DOMAIN comes from the namespace k8s-cluster-info ConfigMap.
   sourceRef:
     kind: GitRepository
     name: flux-system
