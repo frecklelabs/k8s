@@ -1,0 +1,14 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: qwen38-flash-next
+spec:
+  # A worker eviction recreates its whole group; include both roles so it
+  # consumes the same budget as a leader eviction. Recovery can hold a drain.
+  # Pod readiness is not atomic group readiness; serialize maintenance too.
+  minAvailable: 3
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+  selector:
+    matchLabels:
+      leaderworkerset.sigs.k8s.io/name: qwen38-flash-next
