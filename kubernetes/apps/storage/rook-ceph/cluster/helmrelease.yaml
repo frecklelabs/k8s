@@ -259,7 +259,8 @@ spec:
           bdev_async_discard_threads: "1" # quote
           osd_class_update_on_start: "false" # quote
       dashboard:
-        enabled: true
+        # Isolate dashboard contribution to active mgr memory growth for 48 hours.
+        enabled: false
         ssl: false
         urlPrefix: /
         prometheusEndpoint: http://vmsingle-vm.observability.svc.cluster.local:8429
