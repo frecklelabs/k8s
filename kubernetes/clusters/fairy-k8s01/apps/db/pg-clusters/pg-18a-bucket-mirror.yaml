@@ -17,12 +17,12 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes: [ReadWriteOnce]
-  # Sized for 30 days of 6-hourly bzip2 bases plus WAL. One database's
-  # growth (about 2 GB/day from 2026-11-11) had 50Gi a few days from full;
-  # 150Gi is headroom until that app's retention lands (C-2432).
+  # Headroom for 30 days of 6-hourly bzip2 bases plus WAL (C-3937).
+  # Continued database growth exhausted 150Gi; 500Gi is not a measured
+  # steady-state requirement. Expansion cannot be undone by a Git revert.
   resources:
     requests:
-      storage: 150Gi
+      storage: 500Gi
   storageClassName: truenas-nfs-backup
 ---
 apiVersion: batch/v1
