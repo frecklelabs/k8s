@@ -41,8 +41,8 @@ spec:
       APP: *app
       VOLSYNC_UID: "3000"
       VOLSYNC_CAPACITY: 100Gi
-      # Active mover working sets approach 1Gi; retain headroom for the trial.
-      VOLSYNC_MEMORY_LIMIT: 2Gi
+      # Measured destination peaks nearly reached 2Gi; retain transfer headroom.
+      VOLSYNC_MEMORY_LIMIT: 4Gi
       # Every 4h, not hourly: rsync walks ~130k metadata files to an HDD-backed
       # NFS destination, and busy runs overran the hour and piled up missed
       # schedules. Fewer runs also mean fewer iSCSI snapshot stage/unstage
