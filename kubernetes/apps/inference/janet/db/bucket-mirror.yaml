@@ -21,6 +21,8 @@ kind: CronJob
 metadata:
   name: janet-db-bucket-mirror
 spec:
+  # C-781/C-3662: mirror repair abandoned; preserve backups pending teardown review.
+  suspend: true
   schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
