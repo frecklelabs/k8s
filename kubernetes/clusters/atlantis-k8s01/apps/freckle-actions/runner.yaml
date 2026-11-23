@@ -20,6 +20,20 @@ spec:
       namespace: dev-platform
   interval: 1h
   path: ./kubernetes/apps/actions-runner-controller/runners/freckle-actions
+  # C-3827: bounded concurrency trial; remove this patch to restore the shared maximum.
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        version: v2
+        kind: HelmRelease
+        name: freckle-actions-runner
+      patch: |-
+        - op: test
+          path: /spec/values/maxRunners
+          value: 10
+        - op: replace
+          path: /spec/values/maxRunners
+          value: 6
   prune: true
   retryInterval: 2m
   sourceRef:
