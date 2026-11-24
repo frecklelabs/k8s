@@ -125,6 +125,6 @@
         ]
       }
     },
-    "suspend": true
+    "suspend": false
   }
 }
