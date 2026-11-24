@@ -20,5 +20,6 @@ addressing plan. Historical diagrams and hardware tables have been retired.
 ## Related pages
 
 - [Network design](../../networking/fairy-network.md) — segmentation and Kubernetes connectivity patterns
+- [BGP for Kubernetes Services](../../networking/fairy-bgp.md) — route ownership and verification
 - [Naming conventions](../../reference/naming-conventions.md) — host, location and service names
 - [Device inventory](../../reference/inventory.md) — inventory publication policy
