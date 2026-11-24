@@ -169,7 +169,7 @@ spec:
       - name: package_proxy
         ensure: present
         login: true
-        connectionLimit: 40
+        connectionLimit: 128
         passwordSecret:
           name: package-proxy-db-role
       # db-read (C-414): read-only SQL on BookOrbit's database for agents
