@@ -18,6 +18,37 @@ spec:
     timeout: 2m
     remediation:
       retries: 1
+  # v0.16.0 serves gRPC on every replica after cache sync; only the ObjectStore
+  # controller needs the leader lease. TLS Secrets are read-only and each pod
+  # listens on its own TCP socket, so updates can safely overlap.
+  # Chart 0.9.0 hardcodes Recreate and probes the manager port instead of gRPC.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: plugin-barman-cloud
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: plugin-barman-cloud
+              spec:
+                minReadySeconds: 10
+                strategy:
+                  type: RollingUpdate
+                  rollingUpdate:
+                    maxUnavailable: 0
+                    maxSurge: 1
+                template:
+                  spec:
+                    containers:
+                      - name: barman-cloud
+                        readinessProbe:
+                          tcpSocket:
+                            port: 9090
   values:
     # The plugin must run in the CNPG operator's namespace (the operator
     # discovers plugins by Service in its own namespace). atlantis runs the
