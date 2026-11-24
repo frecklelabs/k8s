@@ -16,3 +16,11 @@ resources:
   - ./cluster-triage.yaml
   - ./log-search-atlantis.yaml
   - ./cluster-triage-atlantis.yaml
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      - op: add
+        path: /metadata/labels
+        value:
+          freckle.systems/ghcr-pull: "true"
