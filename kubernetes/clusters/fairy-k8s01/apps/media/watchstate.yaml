@@ -28,6 +28,7 @@ spec:
   path: ./kubernetes/apps/media/watchstate
   components:
     - ../../../components/volsync-rsync-tls
+    - ../../../components/volsync-rsync-tls-memory
   interval: 2m
   retryInterval: 1m
   timeout: 5m
@@ -40,4 +41,6 @@ spec:
       # 5Gi filled up: WatchState's startup db:maintenance VACUUMs the SQLite
       # DB, which needs free space about the size of the DB itself.
       VOLSYNC_CAPACITY: 10Gi
+      # Leave headroom above measured active-transfer memory.
+      VOLSYNC_MEMORY_LIMIT: 2Gi
       VOLSYNC_SCHEDULE: "27 * * * *"
