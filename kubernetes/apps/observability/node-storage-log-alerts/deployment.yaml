@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: vmalert
-          image: docker.io/victoriametrics/vmalert:v1.156.0
+          image: docker.io/victoriametrics/vmalert:v1.157.0
           args:
             - -rule=/etc/vmalert/rules.yaml
             - -httpListenAddr=:8880
