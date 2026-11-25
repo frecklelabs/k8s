@@ -88,7 +88,9 @@ spec:
         controller: music-assistant
         ports:
           http:
-            port: &port 8095
+            # Port 80 so in-cluster clients use plain http://music-assistant/.
+            port: &port 80
+            targetPort: 8095
     route:
       app:
         hostnames: ["{{ .Release.Name }}.${CLUSTER_SUBDOMAIN}.freckle.tools"]
