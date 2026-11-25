@@ -86,6 +86,7 @@
       // rerun data-saving commands. Keep changes deliberate and manually reviewed.
       matchFileNames: [
         'kubernetes/apps/hedgehog/queue/pre-upgrade-save.yaml',
+        'kubernetes/apps/mealie-file-check/scratch.yaml',
         'kubernetes/apps/nautobot/queue/pre-upgrade-save.yaml',
       ],
       enabled: false,
