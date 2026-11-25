@@ -30,6 +30,7 @@ spec:
   path: ./kubernetes/apps/media/bookorbit
   components:
     - ../../../components/volsync-rsync-tls
+    - ../../../components/volsync-rsync-tls-memory
   interval: 2m
   retryInterval: 1m
   timeout: 5m
