@@ -34,6 +34,17 @@ spec:
         - op: replace
           path: /spec/values/maxRunners
           value: 6
+        # C-4600: runner work and image layers are emptyDir on the node's system
+        # disk, which control-plane nodes share with etcd. Keep CI off those nodes.
+        - op: add
+          path: /spec/values/template/spec/affinity
+          value:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
   prune: true
   retryInterval: 2m
   sourceRef:
