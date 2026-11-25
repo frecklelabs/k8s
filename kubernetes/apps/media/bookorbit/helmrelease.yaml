@@ -39,8 +39,14 @@ spec:
             # Local article-sort patch preserves displayed names and metadata.
             image:
               repository: ghcr.io/frecklelabs/bookorbit
-              tag: 3.6.0-1@sha256:858c084c61328620e66acb92a56d8338fb9ef896f3957396c6453d6431d5674f
+              tag: 3.6.0-5@sha256:1c9eae3968a96ad43f64e5e2ffce53c983bfb25f1ded11f1fe3bcc09cd0648bb
             env:
+              ACCESSION_METADATA_EXECUTOR: http://accession.media.svc.cluster.local/bookorbit/metadata/execute
+              ACCESSION_METADATA_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: accession-secrets
+                    key: API_TOKEN
               NODE_ENV: production
               PORT: &port 3000
               HOST: "::"
