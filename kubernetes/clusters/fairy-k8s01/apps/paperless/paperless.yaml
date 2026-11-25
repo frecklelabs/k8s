@@ -29,6 +29,8 @@ spec:
     name: flux-system
     namespace: flux-system
   path: ./kubernetes/apps/paperless
+  components:
+    - ../../components/volsync-rsync-tls-memory
   interval: 2m
   retryInterval: 1m
   timeout: 10m
