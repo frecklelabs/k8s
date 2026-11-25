@@ -24,3 +24,119 @@ spec:
   interval: 30s
   retryInterval: 1m
   timeout: 5m
+  patches:
+    - patch: |-
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: victoria-logs
+        spec:
+          values:
+            vector:
+              logLevel: "info,vector::internal_events::file::source=off"
+              customConfigName: vector-vl-config-audit
+              existingConfigMaps:
+                - vector-vl-config-audit
+              customConfig:
+                sources:
+                  audit:
+                    type: file
+                    include:
+                      - /var/log/audit/kube/kube-apiserver.log
+                    read_from: end
+                    ignore_checkpoints: false
+                    max_line_bytes: 32768
+                transforms:
+                  audit-parser:
+                    type: remap
+                    inputs:
+                      - audit
+                    drop_on_abort: true
+                    drop_on_error: true
+                    source: |
+                      event = object!(parse_json!(string!(.message)))
+                      if event.apiVersion != "audit.k8s.io/v1" || event.kind != "Event" || event.level != "Metadata" || exists(event.requestObject) || exists(event.responseObject) {
+                        abort
+                      }
+                      if !includes(["RequestReceived", "ResponseStarted", "ResponseComplete", "Panic"], event.stage) {
+                        abort
+                      }
+                      if string!(event.auditID) == "" || string!(event.requestURI) == "" || string!(event.verb) == "" || !is_object(event.user) {
+                        abort
+                      }
+                      if (parse_timestamp(string!(event.requestReceivedTimestamp), format: "%+") ?? null) == null {
+                        abort
+                      }
+                      event_time = parse_timestamp!(string!(event.stageTimestamp), format: "%+")
+                      for_each(event) -> |field, value| {
+                        if field == "userAgent" {
+                          assert!(is_string(value))
+                        } else if field == "sourceIPs" {
+                          for_each(array!(value)) -> |_index, address| {
+                            assert!(is_string(address))
+                          }
+                        } else if includes(["objectRef", "annotations", "authenticationMetadata"], field) {
+                          for_each(object!(value)) -> |_key, text| {
+                            assert!(is_string(text))
+                          }
+                        } else if includes(["user", "impersonatedUser"], field) {
+                          for_each(object!(value)) -> |key, attribute| {
+                            if includes(["username", "uid"], key) {
+                              assert!(is_string(attribute))
+                            } else if key == "groups" {
+                              for_each(array!(attribute)) -> |_index, group| {
+                                assert!(is_string(group))
+                              }
+                            } else if key == "extra" {
+                              for_each(object!(attribute)) -> |_key, entries| {
+                                for_each(array!(entries)) -> |_index, entry| {
+                                  assert!(is_string(entry))
+                                }
+                              }
+                            } else {
+                              abort
+                            }
+                          }
+                        }
+                      }
+                      if exists(event.responseStatus) {
+                        status = filter(object!(event.responseStatus)) -> |key, _value| {
+                          includes(["code", "status", "reason", "message"], key)
+                        }
+                        for_each(status) -> |key, value| {
+                          if key == "code" {
+                            assert!(is_integer(value))
+                          } else {
+                            assert!(is_string(value))
+                          }
+                        }
+                        event.responseStatus = status
+                      }
+                      . = filter(event) -> |key, _value| {
+                        includes(["apiVersion", "kind", "level", "auditID", "stage", "requestURI", "verb", "user", "impersonatedUser", "authenticationMetadata", "sourceIPs", "userAgent", "objectRef", "responseStatus", "requestReceivedTimestamp", "stageTimestamp", "annotations"], key)
+                      }
+                      .timestamp = event_time
+                      .log_source = "kube-apiserver-audit"
+                      .node = get_env_var!("VECTOR_SELF_NODE_NAME")
+                sinks:
+                  vlogs-audit:
+                    type: elasticsearch
+                    inputs:
+                      - audit-parser
+                    api_version: v8
+                    compression: gzip
+                    mode: bulk
+                    healthcheck:
+                      enabled: false
+                    request:
+                      headers:
+                        AccountID: "0"
+                        ProjectID: "0"
+                        VL-Msg-Field: verb
+                        VL-Stream-Fields: log_source,node
+                        VL-Time-Field: timestamp
+      target:
+        group: helm.toolkit.fluxcd.io
+        version: v2
+        kind: HelmRelease
+        name: victoria-logs
