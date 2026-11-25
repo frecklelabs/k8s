@@ -90,15 +90,23 @@ spec:
                       .log_source = "host-udevd"
                       .timestamp_origin = "ingest"
                 sinks:
-                  vlogs-0:
+                  host-logs:
+                    type: elasticsearch
                     inputs:
-                      - parser
-                      - audit-parser
                       - host-kernel-parser
                       - host-udevd-parser
+                    api_version: v8
+                    compression: gzip
+                    mode: bulk
+                    healthcheck:
+                      enabled: false
                     request:
                       headers:
-                        VL-Stream-Fields: stream,kubernetes.pod_name,kubernetes.container_name,kubernetes.pod_namespace,log_source,cluster,node
+                        AccountID: "0"
+                        ProjectID: "0"
+                        VL-Msg-Field: log
+                        VL-Stream-Fields: log_source,cluster,node
+                        VL-Time-Field: timestamp
       target:
         group: helm.toolkit.fluxcd.io
         version: v2
