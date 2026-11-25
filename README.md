@@ -110,6 +110,7 @@ kubernetes/
 - **Zigbee2MQTT**: Zigbee device integration
 - **Scrypted**: Camera and NVR management
 - **Mosquitto**: MQTT message broker
+- **Music Assistant**: Music library and multi-room speaker control
 - **rtl_433**: 433MHz radio receiver for IoT devices
 
 ### Development & Productivity

@@ -14,5 +14,6 @@ resources:
   # - homeassistant.yaml
   - mosquitto.yaml
   - mqtt2prometheus.yaml
+  - music-assistant.yaml
   - rtl915.yaml
   - scrypted.yaml

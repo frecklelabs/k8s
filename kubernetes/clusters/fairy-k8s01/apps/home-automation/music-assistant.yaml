@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app music-assistant
+  namespace: &namespace home-automation
+  labels:
+    infra.freckle.systems/post-build-variables: enabled
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  path: ./kubernetes/apps/home-automation/music-assistant
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 2m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  patches:
+    - target:
+        kind: HelmRelease
+      patch: |-
+        # Speakers find the server over mDNS and pull audio from it, so it
+        # needs an address on their L2 segment. The server advertises its
+        # default-route address (the pod network) unless the published IP
+        # under Settings > Core > Streams is set to the address below.
+        - op: add
+          path: /spec/values/controllers/music-assistant/pod/annotations/k8s.v1.cni.cncf.io~1networks
+          value: |
+            [{
+              "name":"multus-trusted",
+              "namespace": "networking",
+              "ips": ["10.189.10.42/24"],
+              "mac": "ae:98:3e:1a:78:51"
+            }]
+
+        - op: add
+          path: /spec/values/controllers/music-assistant/pod/nodeSelector
+          value:
+            networks.freckle.systems/home-lan: present
