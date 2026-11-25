@@ -3,12 +3,9 @@
 name: Vendored CRDs Check
 
 on:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - "kubernetes/apps/networking/gateway-api/**"
-      - "scripts/vendor-gateway-api-crds.sh"
-      - ".github/workflows/vendored-crds-check.yaml"
+  # render.yaml calls this on every merge_group so truncated file lists
+  # cannot bypass the check. For pull_request it filters on vendoring inputs.
+  workflow_call:
 
 permissions:
   contents: read
