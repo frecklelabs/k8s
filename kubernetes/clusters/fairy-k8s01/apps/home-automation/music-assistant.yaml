@@ -17,9 +17,6 @@ spec:
     name: flux-system
     namespace: flux-system
   path: ./kubernetes/apps/home-automation/music-assistant
-  dependsOn:
-    - name: rook-ceph-cluster
-      namespace: rook-ceph
   interval: 2m
   retryInterval: 1m
   timeout: 5m

@@ -23,9 +23,6 @@ spec:
     mode: enabled
     ignore:
       - paths: ["/spec/replicas"]
-  dependsOn:
-    - name: rook-ceph-cluster
-      namespace: rook-ceph
   values:
     controllers:
       music-assistant:
@@ -34,7 +31,6 @@ spec:
         # The data volume is ReadWriteOnce and the server keeps a SQLite
         # library in it, so two pods must never overlap.
         strategy: Recreate
-
         pod:
           # annotations + nodeSelector are added by the fairy cluster KS
           # patches (multus network + home-lan node selector); keep the
@@ -49,7 +45,6 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
             seccompProfile:
               type: RuntimeDefault
-
         containers:
           app:
             image:
@@ -85,7 +80,6 @@ spec:
               runAsNonRoot: true
               seccompProfile:
                 type: RuntimeDefault
-
     # Only the web UI goes through the gateway. Speakers fetch audio from
     # the stream server (8097) straight off the pod's home-LAN address,
     # which no Service fronts.
@@ -95,7 +89,6 @@ spec:
         ports:
           http:
             port: &port 8095
-
     route:
       app:
         hostnames: ["{{ .Release.Name }}.${CLUSTER_SUBDOMAIN}.freckle.tools"]
@@ -106,7 +99,6 @@ spec:
           - backendRefs:
               - identifier: app
                 port: *port
-
     persistence:
       data:
         enabled: true
