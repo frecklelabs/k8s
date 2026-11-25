@@ -1,13 +1,5 @@
 ---
-# PARKED (C-2876, 2026-11-16): renamed from cnp.yaml and dropped from
-# kustomization.yaml, so Flux prunes it and Floppy runs with no policy. The
-# egress allowlist was too narrow (it blocked api.trakt.tv for the Trakt OAuth
-# import, and itunes.apple.com), and nobody had listed everything Floppy
-# reaches. While it is parked we observe Floppy's real traffic, then rebuild
-# this policy from that evidence and restore it as cnp.yaml. Ingress was locked
-# down here too, so it is open during the window; the route still goes through
-# the tailnet gateway.
-#
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/cilium.io/ciliumnetworkpolicy_v2.json
 # App OIDC is user-specific; the gateway also protects startup recovery pages.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -17,6 +9,7 @@ spec:
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: floppy
+      io.cilium.k8s.policy.serviceaccount: floppy
   ingress:
     - fromEndpoints:
         - matchLabels:
@@ -25,6 +18,9 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: media
             app.kubernetes.io/name: jellyfin
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app.kubernetes.io/name: silo-api
       toPorts:
         - ports:
             - port: "8000"
@@ -61,11 +57,19 @@ spec:
               protocol: TCP
     - toFQDNs:
         - matchName: freckle.id
+        - matchName: api.trakt.tv
         - matchName: api.themoviedb.org
         - matchName: image.tmdb.org
-        - matchName: api.thetvdb.com
         - matchName: api4.thetvdb.com
+        - matchName: artworks.thetvdb.com
         - matchName: api.myanimelist.net
+        - matchName: itunes.apple.com
+        - matchName: openlibrary.org
+        - matchName: comicvine.gamespot.com
+        - matchName: boardgamegeek.com
+        - matchName: raw.githubusercontent.com
+        - matchName: github.com
+        - matchName: release-assets.githubusercontent.com
       toPorts:
         - ports:
             - port: "443"
