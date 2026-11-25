@@ -4,10 +4,16 @@
 # file. Private workloads and site-specific network-device scrape configs live
 # there instead of in this public repo. See that repo's CLAUDE.md.
 #
-# SSH (not the flux-system GitHub App) so the credential is a scoped, read-only
-# deploy key on that one repo — the App's blast radius is the whole org.
-# The key is DISTINCT from atlantis's: GitHub rejects the same public key as a
-# deploy key on a repo twice, and a per-cluster key keeps revocation granular.
+# Auth is the flux-system GitHub App (freckle-flux, Secret `github-app`, see
+# kubernetes/apps/flux/instance/github-app-externalsecret.yaml), not an SSH
+# deploy key. The App is installed only on frecklelabs/k8s and k8s-private,
+# with contents write and no workflows permission, so GitHub refuses any push
+# from it touching .github/workflows/ (a deploy key could push anything).
+# Tokens are short-lived installation tokens, and image-automation-controller
+# pushes flux/image-updates as a named App actor (C-1315).
+#
+# The deploy-key ExternalSecret stays for rollback until atlantis has switched
+# too; then it and the keys are removed.
 # yaml-language-server: $schema=https://k8s-schemas.freckle.systems/source.toolkit.fluxcd.io/gitrepository_v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -16,11 +22,12 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: ssh://git@github.com/frecklelabs/k8s-private.git
+  url: https://github.com/frecklelabs/k8s-private.git
+  provider: github
   ref:
     branch: main
   secretRef:
-    name: infra-private-deploy-key
+    name: github-app
 ---
 # Root Kustomization for the private source — the analogue of the FluxInstance's
 # spec.sync for flux-system, but as a plain Kustomization since the operator
