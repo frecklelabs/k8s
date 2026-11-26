@@ -25,6 +25,13 @@ spec:
   prune: false
   wait: true
   patches:
+    - target:
+        kind: OCIRepository
+        name: rook-ceph-cluster
+      patch: |
+        - op: replace
+          path: /spec/ref/tag
+          value: "1.21.3"
     # Encrypt new OSDs at rest (C-1419). Rook reads this only when it creates an
     # OSD, so existing OSDs stay as they are; the cn04+ rebuild retires them.
     # Host-based OSDs keep their LUKS keys in the mon config-key store
