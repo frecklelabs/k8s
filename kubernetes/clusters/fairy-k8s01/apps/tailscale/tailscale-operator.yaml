@@ -19,7 +19,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./kubernetes/apps/networking/tailscale-operator/wif-operator
+  path: ./kubernetes/clusters/fairy-k8s01/apps/tailscale/operator
   interval: 30s
   retryInterval: 1m
   timeout: 5m
