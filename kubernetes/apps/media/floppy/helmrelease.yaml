@@ -67,6 +67,7 @@ spec:
               USE_X_FORWARDED_HOST: "false"
               USE_X_FORWARDED_PORT: "false"
               FLOPPY_REDIS_MAXMEMORY: "0"
+              ROTTEN_TOMATOES: "false"
               PUID: "1000"
               PGID: "1000"
               FLOPPY_DATA_DIR: /floppy/db
