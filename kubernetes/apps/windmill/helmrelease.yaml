@@ -12,6 +12,9 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: windmill
+  upgrade:
+    strategy:
+      name: RetryOnFailure
   values:
     postgresql:
       enabled: false
