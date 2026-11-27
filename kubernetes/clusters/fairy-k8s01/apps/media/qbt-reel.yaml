@@ -38,7 +38,7 @@ spec:
       APP: *app
       # Fresh PVC (bare name) owned by the share's uid.
       VOLSYNC_UID: "3000"
-      VOLSYNC_CAPACITY: 1Gi
+      VOLSYNC_CAPACITY: 4Gi
       VOLSYNC_SCHEDULE: "47 * * * *"
       # Inside the NodePort range: the transfer-port Service uses it as its
       # nodePort too (patch below), for inbound IPv6 to the node address.
