@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tailscale-operator-version
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+data:
+  TAILSCALE_OPERATOR_VERSION: ""
