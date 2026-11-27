@@ -10,6 +10,9 @@ spec:
     name: app-template
     namespace: default
   interval: 1h
+  upgrade:
+    strategy:
+      name: RetryOnFailure
   values:
     defaultPodOptions:
       annotations:

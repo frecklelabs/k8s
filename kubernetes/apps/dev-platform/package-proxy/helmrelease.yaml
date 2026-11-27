@@ -28,8 +28,8 @@ spec:
       retries: 3
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
   values:
     fullnameOverride: package-proxy
     replicaCount: 2

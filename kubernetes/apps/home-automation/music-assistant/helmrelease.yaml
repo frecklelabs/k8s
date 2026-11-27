@@ -15,8 +15,8 @@ spec:
       retries: -1
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
   uninstall:
     keepHistory: false
   driftDetection:
