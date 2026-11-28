@@ -81,6 +81,9 @@ spec:
         - op: replace
           path: /spec/values/controllers/qbittorrent/containers/app/resources/limits/memory
           value: 16Gi
+        - op: add
+          path: /spec/values/defaultPodOptions/terminationGracePeriodSeconds
+          value: 120
         # nodePort = transfer port: pod IPv6 egress leaves from the node's
         # public IPv6, so peers dial <node IPv6>:<port>; the NodePort maps it
         # to the pod (eTP Local, so only the pod's node answers). IPv4 still
