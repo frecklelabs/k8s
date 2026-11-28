@@ -1,0 +1,22 @@
+---
+groups:
+  - name: node-storage-log-health
+    type: vlogs
+    interval: 30s
+    eval_delay: 0s
+    eval_alignment: false
+    rules:
+      - alert: NodeCephHandshakeFailures
+        expr: >-
+          _time:5m {log_source="host-kernel",cluster="${CLUSTER_NAME}",node!=""}
+          timestamp_origin:=event
+          _msg:~"^libceph: (.* )?socket closed [(]con state V2_BANNER_PREFIX[)]( [(]-[A-Z0-9_]+[)])?$"
+          | stats by (cluster, node) count_uniq(_time) as failures
+          | filter failures:>=3
+        labels:
+          severity: warning
+        annotations:
+          summary: Repeated kernel Ceph handshake failures on {{ $labels.node }}
+          description: >-
+            {{ $value }} distinct event times with a libceph V2_BANNER_PREFIX socket close
+            in five minutes. Check Ceph connectivity, RBD I/O and udev queue health on this node.

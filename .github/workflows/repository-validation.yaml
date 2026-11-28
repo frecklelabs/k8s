@@ -2,8 +2,9 @@
 name: Repository Validation
 
 on:
-  pull_request:
-    branches: ["main"]
+  # Pull requests and merge queue groups run this through render.yaml, whose
+  # "Render - Success" is the required check.
+  workflow_call:
   push:
     branches: ["main"]
   workflow_dispatch:
@@ -53,7 +54,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate markdown files
-        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25
+        uses: DavidAnson/markdownlint-cli2-action@3ce8f712b5d8f31acd8e201be6d97e3d2bb23eb7 # v25
         with:
           globs: |
             **/*.md

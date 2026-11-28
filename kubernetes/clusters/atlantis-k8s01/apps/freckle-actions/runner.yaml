@@ -20,7 +20,6 @@ spec:
       namespace: dev-platform
   interval: 1h
   path: ./kubernetes/apps/actions-runner-controller/runners/freckle-actions
-  # C-3827: bounded concurrency trial; remove this patch to restore the shared maximum.
   patches:
     - target:
         group: helm.toolkit.fluxcd.io
@@ -28,12 +27,17 @@ spec:
         kind: HelmRelease
         name: freckle-actions-runner
       patch: |-
-        - op: test
-          path: /spec/values/maxRunners
-          value: 10
-        - op: replace
-          path: /spec/values/maxRunners
-          value: 6
+        # C-4600: runner work and image layers are emptyDir on the node's system
+        # disk, which control-plane nodes share with etcd. Keep CI off those nodes.
+        - op: add
+          path: /spec/values/template/spec/affinity
+          value:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
   prune: true
   retryInterval: 2m
   sourceRef:

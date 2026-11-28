@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Compile the rendered Vector config and exercise host event trust and time."""
-import copy
+"""Exercise the Flux- and Helm-rendered Vector config; pass the pinned chart archive."""
+import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -9,25 +9,33 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTOR = os.environ.get('VECTOR_BIN', 'vector')
+HELM = os.environ.get('HELM_BIN', 'helm')
+APP = ROOT / 'kubernetes/apps/observability/victoria-logs'
+POINTER = ROOT / 'kubernetes/clusters/fairy-k8s01/apps/observability/victoria-logs.yaml'
 
 
-def merge(left, right):
-    for key, value in right.items():
-        if isinstance(value, dict) and isinstance(left.get(key), dict):
-            merge(left[key], value)
-        else:
-            left[key] = copy.deepcopy(value)
-    return left
+def render(chart, directory):
+    flux_output = subprocess.check_output([
+        'flux', '-n', 'observability', 'build', 'kustomization', 'victoria-logs',
+        '--dry-run', '--path', str(APP), '--kustomization-file', str(POINTER),
+    ], text=True)
+    resources = {doc['kind']: doc for doc in yaml.safe_load_all(flux_output) if doc}
+    values = resources['HelmRelease']['spec']['values']
+    values_path = directory / 'values.yaml'
+    values_path.write_text(yaml.safe_dump(values).replace('${CLUSTER_NAME}', 'test-cluster'))
+    metadata = yaml.safe_load(subprocess.check_output([HELM, 'show', 'chart', chart], text=True))
+    assert metadata['version'] == str(resources['OCIRepository']['spec']['ref']['tag'])
+    output = subprocess.check_output([
+        HELM, 'template', 'victoria-logs', chart, '--namespace', 'observability',
+        '--kube-version', '1.37.2', '--values', str(values_path),
+    ], text=True)
+    configmaps = [doc for doc in yaml.safe_load_all(output) if doc and doc['kind'] == 'ConfigMap'
+                  and doc['metadata']['name'] == 'vector-vl-config']
+    assert len(configmaps) == 1
+    return yaml.safe_load(configmaps[0]['data']['victoria-logs-vector.yaml'])
 
 
-def main():
-    shared = list(yaml.safe_load_all((ROOT / 'kubernetes/apps/observability/victoria-logs/helmrelease.yaml').read_text()))[1]
-    pointer = yaml.safe_load((ROOT / 'kubernetes/clusters/fairy-k8s01/apps/observability/victoria-logs.yaml').read_text())
-    patch = yaml.safe_load(pointer['spec']['patches'][0]['patch'])
-    merged = merge(copy.deepcopy(shared), patch)
-    config = merged['spec']['values']['vector']['customConfig']
-    # Resolve only the same post-build cluster placeholder used by Flux.
-    config = yaml.safe_load(yaml.safe_dump(config).replace('${CLUSTER_NAME}', 'test-cluster'))
+def check_topology(config):
     assert set(config['sources']) == {'internal_metrics', 'k8s', 'audit', 'host-kernel', 'host-udevd'}
     assert config['sources']['host-udevd']['read_from'] == 'end'
     assert config['sources']['host-kernel']['read_from'] == 'beginning'
@@ -35,9 +43,21 @@ def main():
         assert config['sources'][name]['ignore_checkpoints'] is False
         assert config['sources'][name]['max_line_bytes'] == 32768
         assert config['sources'][name]['fingerprint']['strategy'] == 'device_and_inode'
-    assert config['data_dir'] == shared['spec']['values']['vector']['customConfig']['data_dir']
-    for name in ('parser', 'audit-parser'):
-        assert config['transforms'][name] == shared['spec']['values']['vector']['customConfig']['transforms'][name]
+    assert config['data_dir'] == '/vector-data-dir'
+    sinks = config['sinks']
+    host = sinks['host-logs-0']
+    assert host['inputs'] == ['host-kernel-parser', 'host-udevd-parser']
+    assert host['endpoints'] == sinks['vlogs-0']['endpoints']
+    headers = host['request']['headers']
+    assert headers['VL-Stream-Fields'] == 'log_source,cluster,node'
+    assert headers['VL-Time-Field'] == 'timestamp'
+    assert headers['VL-Msg-Field'] == 'log'
+    for transform, sink in [('parser', 'vlogs-0'), ('host-kernel-parser', 'host-logs-0'),
+                            ('host-udevd-parser', 'host-logs-0')]:
+        assert [name for name, spec in sinks.items() if transform in spec['inputs']] == [sink]
+
+
+def check_parsers(config, directory):
 
     def fixture(name, transform, message, condition, extra=None):
         fields = {'message': message, 'timestamp': '2026-01-01T00:00:00Z'}
@@ -70,12 +90,22 @@ def main():
                 'strlen(string!(.log)) <= 8192'),
     ]
     env = dict(os.environ, VECTOR_SELF_NODE_NAME='test-node', CLUSTER_NAME='test-cluster')
-    with tempfile.TemporaryDirectory(prefix='c887-vector-', dir=os.environ.get('TMPDIR', '/work/tmp')) as tmp:
-        path = Path(tmp) / 'vector.yaml'
-        path.write_text(yaml.safe_dump(config, sort_keys=False))
-        subprocess.run([VECTOR, 'validate', '--no-environment', str(path)], env=env, check=True)
-        subprocess.run([VECTOR, 'test', str(path)], env=env, check=True)
-    print('7 Vector host-log scenarios passed; existing parsers preserved')
+    path = directory / 'vector.yaml'
+    path.write_text(yaml.safe_dump(config, sort_keys=False))
+    subprocess.run([VECTOR, 'validate', '--no-environment', str(path)], env=env, check=True)
+    subprocess.run([VECTOR, 'test', str(path)], env=env, check=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('chart', help='local victoria-logs-single chart archive pinned by Flux')
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory(prefix='host-log-test-') as tmp:
+        directory = Path(tmp)
+        config = render(args.chart, directory)
+        check_topology(config)
+        check_parsers(config, directory)
+    print('Rendered Vector topology and 7 host-log scenarios passed')
 
 
 if __name__ == '__main__':

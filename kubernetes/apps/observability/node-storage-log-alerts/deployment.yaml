@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-storage-log-alerts
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-storage-log-alerts
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: node-storage-log-alerts
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: vmalert
+          image: docker.io/victoriametrics/vmalert:v1.157.0
+          args:
+            - -rule=/etc/vmalert/rules.yaml
+            - -httpListenAddr=:8880
+            - -datasource.url=http://victoria-logs-server:9428
+            - -notifier.url=http://vmalertmanager-vm-0.vmalertmanager-vm:9093,http://vmalertmanager-vm-1.vmalertmanager-vm:9093
+          ports:
+            - name: http
+              containerPort: 8880
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: rules
+              mountPath: /etc/vmalert
+              readOnly: true
+      volumes:
+        - name: rules
+          configMap:
+            name: node-storage-log-alerts

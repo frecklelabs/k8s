@@ -23,3 +23,11 @@ spec:
   timeout: 30m
   prune: false
   wait: true
+  patches:
+    - target:
+        kind: OCIRepository
+        name: rook-ceph
+      patch: |
+        - op: replace
+          path: /spec/ref/tag
+          value: "1.21.3"

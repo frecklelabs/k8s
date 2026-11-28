@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: ghcr.io/taylorwilsdon/google_workspace_mcp:2.6.0@sha256:0f91da6e5c8a526f4ef89589afdde48255c9f7c162c5ec1547281f55ecf4ef49
+          image: ghcr.io/taylorwilsdon/google_workspace_mcp:2.7.1@sha256:3fcc9fdc718641ad1f2000adbc22efd0eb7a0f9222c4fc9dd85ae0e3e3fa78af
           ports:
             - containerPort: 8000
               name: http

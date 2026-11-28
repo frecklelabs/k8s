@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=https://www.schemastore.org/kustomization.json
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../../../apps/networking/tailscale-operator/wif-operator
+  - ./version.yaml
+replacements:
+  - source:
+      kind: OCIRepository
+      name: tailscale-operator
+      fieldPath: spec.ref.tag
+    targets:
+      - select:
+          kind: ConfigMap
+          name: tailscale-operator-version
+        fieldPaths:
+          - data.TAILSCALE_OPERATOR_VERSION

@@ -30,6 +30,9 @@ spec:
     # own database: CONNECT is granted to PUBLIC, so without this it would
     # read every database here (C-414).
     pg_hba:
+      # C-1622: derived documentation roles may connect only to their database.
+      - host docs_search docs_search_owner,docs_search_indexer,docs_search_reader all scram-sha-256
+      - host all docs_search_owner,docs_search_indexer,docs_search_reader all reject
       - host bookorbit bookorbit_read all scram-sha-256
       - host all bookorbit_read all reject
       # The reviewer publisher's role reads and writes only its own tables
@@ -52,6 +55,44 @@ spec:
   # in <tenant>-db.yaml in this directory.
   managed:
     roles:
+      # Independent derived documentation storage; privileges are granted
+      # by its suspended bootstrap job, never through membership in other roles.
+      - name: docs_search_owner
+        ensure: present
+        login: true
+        inherit: false
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 2
+        passwordSecret:
+          name: docs-search-owner-db-role
+      - name: docs_search_indexer
+        ensure: present
+        login: true
+        inherit: false
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 6
+        passwordSecret:
+          name: docs-search-indexer-db-role
+      - name: docs_search_reader
+        ensure: present
+        login: true
+        inherit: false
+        superuser: false
+        bypassrls: false
+        createdb: false
+        createrole: false
+        replication: false
+        connectionLimit: 10
+        passwordSecret:
+          name: docs-search-reader-db-role
       - name: floppy
         ensure: present
         login: true
@@ -169,7 +210,7 @@ spec:
       - name: package_proxy
         ensure: present
         login: true
-        connectionLimit: 40
+        connectionLimit: 128
         passwordSecret:
           name: package-proxy-db-role
       # db-read (C-414): read-only SQL on BookOrbit's database for agents

@@ -21,6 +21,7 @@ resources:
   - ./agent-alert-bridge.yaml
   - ./alertmanager-cockpit.yaml
   - ./victoria-logs.yaml
+  - ./node-storage-log-alerts.yaml
   - ./victoria-traces.yaml
   - ./vm-operator-crds.yaml
   - ./vm-k8s-stack.yaml

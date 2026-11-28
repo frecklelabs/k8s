@@ -5,6 +5,7 @@ metadata:
   name: atlantis-k8s01-kube-apiserver
 spec:
   type: kube-apiserver
+  proxyClass: kube-apiserver
   replicas: 2
   tags:
     - tag:atlantis-k8s01-apiserver

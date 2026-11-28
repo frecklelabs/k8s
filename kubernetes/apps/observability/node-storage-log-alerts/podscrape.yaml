@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.freckle.systems/operator.victoriametrics.com/vmpodscrape_v1beta1.json
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: node-storage-log-alerts
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-storage-log-alerts
+  podMetricsEndpoints:
+    - port: http
+      interval: 30s
+      metricRelabelConfigs:
+        - sourceLabels: [__name__]
+          regex: vmalert_(iteration_total|alerting_rules_errors_total|alerting_rules_last_evaluation_samples|notifier_.*)
+          action: keep
